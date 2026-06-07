@@ -1,0 +1,8 @@
+# Local Claude config
+.claude/settings.local.json
+
+# OS
+.DS_Store
+
+# Local preview server logs
+*.log
