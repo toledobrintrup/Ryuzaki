@@ -19,8 +19,28 @@ const NAV = [
       { id:'piano',    label:'Piano' },
       { id:'guitarra', label:'Guitarra' },
   ]},
-  { id:'filosofia',  label:'Filosofía / Teología',   group:'APRENDIZAJE' },
+  { id:'filosofia',    label:'Filosofía / Teología',   group:'APRENDIZAJE' },
+  { id:'configuracion', label:'Configuración',          group:'SISTEMA' },
 ];
+
+/* ---------- paletas ---------- */
+const PALETTES = [
+  {id:'default', name:'Actual',   sub:'referencia',     bg:'#0d0f12', sf:'#15181c'},
+  {id:'carbon',  name:'Carbón',   sub:'neutro puro',    bg:'#141414', sf:'#202020'},
+  {id:'pizarra', name:'Pizarra',  sub:'azul grafito',   bg:'#0e1420', sf:'#16202e'},
+  {id:'tostado', name:'Tostado',  sub:'grafito cálido', bg:'#131010', sf:'#1d1916'},
+  {id:'musgo',   name:'Musgo',    sub:'terminal verde', bg:'#0d1209', sf:'#141a10'},
+  {id:'ceniza',  name:'Ceniza',   sub:'gris cómodo',    bg:'#1c1c1e', sf:'#2c2c2e'},
+];
+let currentPage = 'dashboard';
+
+function getPalette(){ return localStorage.getItem('ryu-palette')||'default'; }
+function setPalette(id){
+  if(id==='default') document.documentElement.removeAttribute('data-palette');
+  else document.documentElement.setAttribute('data-palette', id);
+  try{ localStorage.setItem('ryu-palette', id); }catch(e){}
+  if(currentPage==='configuracion') setTimeout(()=>go('configuracion'), 40);
+}
 
 /* ---------- helpers ---------- */
 const $ = (s,r=document)=>r.querySelector(s);
@@ -386,6 +406,34 @@ const PAGES = {
       ['"Lo que no me mata me fortalece"','Nietzsche','Crepúsculo de los ídolos','Ética'],
     ])}</div>
   </div>`,
+
+  /* ---------------- CONFIGURACIÓN ---------------- */
+  configuracion:()=>{
+    const cur = getPalette();
+    const cards = PALETTES.map(p=>{
+      const active = cur===p.id;
+      return `<div class="card c-4" style="cursor:pointer${active?';--bc:var(--accent)':''}" onclick="setPalette('${p.id}')">
+        ${cl(p.name, active ? '● ACTIVA' : p.sub)}
+        <div style="display:flex;gap:5px;height:16px;margin:0 0 14px;">
+          <div style="flex:3;background:${p.bg};"></div>
+          <div style="flex:2;background:${p.sf};"></div>
+          <div style="flex:1;background:#f24a4a;"></div>
+        </div>
+        <div class="chips"><span class="chip${active?' on':''}">${p.bg}</span></div>
+      </div>`;
+    }).join('');
+    return `
+      ${head('SISTEMA · CONFIG','Configuración','Elige la paleta de fondos. Persiste entre sesiones.',[])}
+      <div class="sec-title">PALETA DE COLOR</div>
+      <div class="grid palette-grid">${cards}</div>
+      <div class="sec-title">SISTEMA</div>
+      <div class="grid">
+        <div class="card c-4">${cl('MODO','INTERFAZ')}<div class="metric sm">Oscuro</div><div class="metric-sub">único modo · sin tema claro</div></div>
+        <div class="card c-4">${cl('BUILD','VERSIÓN')}<div class="metric sm">1.0</div><div class="metric-sub">Ryuzaki Intelligence System</div></div>
+        <div class="card c-4">${cl('IDIOMA','LOCALE')}<div class="metric sm">ES</div><div class="metric-sub">Español · Chile</div></div>
+      </div>
+    `;
+  },
 };
 
 /* ============================================================
@@ -418,18 +466,13 @@ function buildNav(){
 
 function go(id){
   const page = PAGES[id]; if(!page) return;
+  currentPage = id;
   const meta = findNav(id);
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.nav===id));
   $('#crumb-section').textContent = (meta?.label||id).toUpperCase();
   const view = $('#view'); view.innerHTML = page(); view.classList.remove('fade'); void view.offsetWidth; view.classList.add('fade'); view.scrollTop = 0;
 }
 
-/* ---------- theme ---------- */
-function setTheme(t){
-  document.documentElement.setAttribute('data-theme',t);
-  try{ localStorage.setItem('ryu-theme',t); }catch(e){}
-  const b=$('#theme-toggle'); if(b) b.textContent = t==='dark' ? '☀' : '☾';
-}
 
 /* ---------- mobile menu ---------- */
 $('#menu-toggle').addEventListener('click',()=> $('.sidebar').classList.toggle('open'));
@@ -489,8 +532,7 @@ function boot(){
 buildNav();
 go('dashboard');
 document.querySelector('.logo').addEventListener('click',()=>go('dashboard'));
-setTheme(document.documentElement.getAttribute('data-theme')||'dark');
-$('#theme-toggle').addEventListener('click',()=> setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'));
+$('#settings-btn').addEventListener('click',()=>go('configuracion'));
 boot();
 clock(); setInterval(clock,1000);
 uptime(); setInterval(uptime,1000);
