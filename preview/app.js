@@ -93,10 +93,10 @@ function instrPage(c){ return `
 
 /* ---------- manos a la obra · data + modal ---------- */
 let MAO_VIETNAM = [
-  { titulo:'Coro de la iglesia', area:'Fe', firmeza:'ABSOLUTO', fecha:'2024', veces:1,
+  { decision:'No entrar al coro de la iglesia nunca más', area:'Fe', firmeza:'ABSOLUTO', fecha:'2024', veces:1,
     por:'Participé a pesar de tenerlo anotado. Un amigo insistió en que "esta vez sería diferente". No lo fue — él mismo está a punto de renunciar y es un desastre absoluto. Es el único registro que rompí, y quedó demostrado que nunca debí hacerlo.',
     trampa:'Cuando alguien de confianza dice "esta vez va a ser diferente" o "solo por esta temporada". La insistencia del otro es la señal de peligro, no la razón para ceder.' },
-  { titulo:'Aportes económicos a la iglesia', area:'Finanzas', firmeza:'ABSOLUTO', fecha:'2025', veces:0,
+  { decision:'No aportar económicamente a la iglesia', area:'Finanzas', firmeza:'ABSOLUTO', fecha:'2025', veces:0,
     por:'Este año van $10M aportados. Termino con la alegría del que da, pero con frustración, sensación de que no se lo merecen y con peleas. El patrón se repite siempre, sin excepción. La generosidad mal dirigida no es virtud, es pérdida de libertad.',
     trampa:'Ver un problema el domingo y sentir que puedo — y debo — arreglarlo. La generosidad sin estructura se convierte en resentimiento garantizado.' },
 ];
@@ -157,7 +157,7 @@ function openMaoModal(){
   const body=document.getElementById('mao-m-body');
   if(maoActiveTab==='vietnam'){
     body.innerHTML=`<div style="display:flex;flex-direction:column;gap:16px">
-      <div><label class="form-label">Situación / título</label><input type="text" id="mf-titulo" class="form-input" placeholder="Ej. Coro de la iglesia"></div>
+      <div><label class="form-label">Decisión — ¿qué NO harás?</label><input type="text" id="mf-titulo" class="form-input" placeholder="Ej. No entrar al coro de la iglesia nunca más"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div><label class="form-label">Área</label><input type="text" id="mf-area" class="form-input" placeholder="Fe, Finanzas, Familia…"></div>
         <div><label class="form-label">Año</label><input type="text" id="mf-fecha" class="form-input" placeholder="${new Date().getFullYear()}"></div>
@@ -197,7 +197,7 @@ function submitMaoEntry(){
     const fecha=document.getElementById('mf-fecha')?.value?.trim()||String(new Date().getFullYear());
     const por=document.getElementById('mf-por')?.value?.trim()||'';
     const trampa=document.getElementById('mf-trampa')?.value?.trim()||'';
-    MAO_VIETNAM.push({titulo,area,firmeza,fecha,veces:0,por,trampa});
+    MAO_VIETNAM.push({decision:titulo,area,firmeza,fecha,veces:0,por,trampa});
   } else {
     const desc=document.getElementById('mf-desc')?.value?.trim()||'';
     MAO_COMPROMISOS.push({titulo,area,desc});
@@ -544,19 +544,18 @@ const PAGES = {
 
     const vCards = vietnam.map(v=>{
       const isAbs = v.firmeza==='ABSOLUTO';
+      const dec = v.decision||v.titulo||'';
       const vecesHtml = v.veces > 0
-        ? `<span style="font-family:var(--f-mono);font-size:10px;color:var(--accent);margin-left:auto">● ${v.veces} vez caído</span>`
-        : `<span style="font-family:var(--f-mono);font-size:10px;color:var(--muted);margin-left:auto">● limpio</span>`;
+        ? `<span style="font-family:var(--f-mono);font-size:10px;color:var(--accent)">● ${v.veces} vez caído</span>`
+        : `<span style="font-family:var(--f-mono);font-size:10px;color:var(--muted)">● limpio</span>`;
       return `<div class="card c-6" style="--bc:var(--accent)">
-        <div class="card-head">
-          <span class="card-label"><i></i>${v.titulo.toUpperCase()}</span>
-          <span class="card-tag" style="${isAbs?'color:var(--accent);border-color:var(--accent-w)':''}">${v.firmeza}</span>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
           <span class="chip on">${v.area}</span>
           <span class="chip">${v.fecha}</span>
-          ${vecesHtml}
+          <span class="card-tag" style="margin-left:auto;${isAbs?'color:var(--accent);border-color:var(--accent-w)':''}">${v.firmeza}</span>
         </div>
+        <p style="font-size:16px;font-weight:600;color:var(--ink);line-height:1.4;margin-bottom:10px;">${dec}</p>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px">${vecesHtml}</div>
         <p style="font-size:13px;line-height:1.7;color:var(--ink-soft);font-weight:300;margin-bottom:20px;">${v.por}</p>
         <div style="border-top:1px solid var(--line);padding-top:14px;">
           <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.16em;color:var(--accent);margin-bottom:8px;text-transform:uppercase">▸ La trampa</div>
@@ -604,8 +603,19 @@ const PAGES = {
       <div class="grid" style="margin-bottom:var(--gap)">
         <div class="card c-4">
           ${cl('NO OLVIDES VIETNAM', `${vietnam.length} ENTRADA${vietnam.length!==1?'S':''}`)}
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${areaSummaryChips(vietnam)}</div>
-          <div style="margin-top:12px;font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;color:${totalVeces>0?'var(--accent)':'var(--muted)'}">
+          <div style="margin-top:8px">
+            ${vietnam.map(v=>{
+              const isAbs=v.firmeza==='ABSOLUTO';
+              const dec=v.decision||v.titulo||'';
+              return `<div style="display:flex;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)">
+                <span style="font-family:var(--f-mono);font-size:8px;letter-spacing:.08em;color:${isAbs?'var(--accent)':'var(--muted-2)'};white-space:nowrap;flex:none">${v.firmeza}</span>
+                <span class="chip on" style="flex:none;font-size:9px;padding:2px 7px">${v.area}</span>
+                <span style="font-size:12px;color:var(--ink-soft);line-height:1.4;flex:1">${dec}</span>
+                ${v.veces>0?`<span style="font-family:var(--f-mono);font-size:9px;color:var(--accent);flex:none">●${v.veces}</span>`:''}
+              </div>`;
+            }).join('')}
+          </div>
+          <div style="margin-top:10px;font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;color:${totalVeces>0?'var(--accent)':'var(--muted)'}">
             ${absolutos} ABSOLUTO${absolutos!==1?'S':''} · ${totalVeces} VEZ${totalVeces!==1?'ES':''} CAÍDO
           </div>
         </div>
