@@ -601,27 +601,35 @@ const PAGES = {
       ${head('PRINCIPAL · ACCIÓN','Manos a la obra','Donde la inteligencia se convierte en movimiento. Lo que aprendiste. Lo que te comprometes. Lo que no debes olvidar.',['<button class="btn accent" onclick="openMaoModal()">+ Agregar</button>'])}
 
       <div class="grid" style="margin-bottom:var(--gap)">
-        <div class="card c-4">
+        <div class="card c-12">
           ${cl('NO OLVIDES VIETNAM', `${vietnam.length} ENTRADA${vietnam.length!==1?'S':''}`)}
-          <div style="margin-top:8px">
-            ${vietnam.map(v=>{
-              const isAbs=v.firmeza==='ABSOLUTO';
-              const dec=v.decision||v.titulo||'';
-              return `<div style="display:flex;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)">
-                <span style="font-family:var(--f-mono);font-size:8px;letter-spacing:.08em;color:${isAbs?'var(--accent)':'var(--muted-2)'};white-space:nowrap;flex:none">${v.firmeza}</span>
-                <span class="chip on" style="flex:none;font-size:9px;padding:2px 7px">${v.area}</span>
-                <span style="font-size:12px;color:var(--ink-soft);line-height:1.4;flex:1">${dec}</span>
-                ${v.veces>0?`<span style="font-family:var(--f-mono);font-size:9px;color:var(--accent);flex:none">●${v.veces}</span>`:''}
-              </div>`;
-            }).join('')}
-          </div>
-          <div style="margin-top:10px;font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;color:${totalVeces>0?'var(--accent)':'var(--muted)'}">
-            ${absolutos} ABSOLUTO${absolutos!==1?'S':''} · ${totalVeces} VEZ${totalVeces!==1?'ES':''} CAÍDO
-          </div>
+          <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.1em;color:${totalVeces>0?'var(--accent)':'var(--muted-2)'};margin-bottom:2px">${absolutos} ABSOLUTO${absolutos!==1?'S':''} · ${totalVeces} VEZ${totalVeces!==1?'ES':''} CAÍDO</div>
+          ${vietnam.map((v,i)=>{
+            const isAbs=v.firmeza==='ABSOLUTO';
+            const dec=v.decision||v.titulo||'';
+            const vecesHtml=v.veces>0?`<span style="font-family:var(--f-mono);font-size:9px;color:var(--accent);margin-left:auto">● ${v.veces} caído</span>`:`<span style="font-family:var(--f-mono);font-size:9px;color:var(--muted-2);margin-left:auto">○</span>`;
+            return `<div style="display:flex;gap:18px;padding:14px 0;border-top:1px solid var(--line)">
+              <div style="font-family:var(--f-mono);font-size:26px;font-weight:700;color:var(--line-2);flex:none;width:38px;line-height:1;user-select:none">${String(i+1).padStart(2,'0')}</div>
+              <div style="flex:1">
+                <div style="font-size:15px;font-weight:600;color:var(--ink);line-height:1.35;margin-bottom:8px">${dec}</div>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-family:var(--f-mono);font-size:8px;letter-spacing:.1em;color:${isAbs?'var(--accent)':'var(--muted-2)'}">${v.firmeza}</span>
+                  <span class="chip on" style="font-size:8px;padding:2px 6px">${v.area}</span>
+                  <span style="font-family:var(--f-mono);font-size:8px;color:var(--muted-2)">${v.fecha}</span>
+                  ${vecesHtml}
+                </div>
+              </div>
+            </div>`;
+          }).join('')}
         </div>
-        <div class="card c-4">
+        <div class="card c-8">
           ${cl('COMPROMISOS', `${compromisos.length} ACTIVOS`)}
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${areaSummaryChips(compromisos)}</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-2);border-radius:8px;overflow:hidden;margin-top:12px">
+            ${compromisos.map(c=>`<div style="padding:12px 14px;background:var(--bg)">
+              <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.12em;color:var(--muted-2);margin-bottom:5px">${c.area.toUpperCase()}</div>
+              <div style="font-size:13px;color:var(--ink-soft);line-height:1.35">${c.titulo}</div>
+            </div>`).join('')}
+          </div>
         </div>
         <div class="card c-4">
           ${cl('RACHAS', 'TOP 3 ACTIVAS')}
