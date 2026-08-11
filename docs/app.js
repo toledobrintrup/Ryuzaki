@@ -6,6 +6,7 @@
 const NAV = [
   { id:'dashboard',  label:'Dashboard',            group:'PRINCIPAL' },
   { id:'fin-pers',   label:'Finanzas Personales',   group:'PRINCIPAL' },
+  { id:'manos-obra', label:'Manos a la obra',        group:'PRINCIPAL' },
   { id:'futuro',     label:'Corporación Futuro',     group:'NEGOCIOS' },
   { id:'bosquemar',  label:'C.D. Bosquemar',         group:'NEGOCIOS' },
   { id:'construcc',  label:'Construcciones',         group:'NEGOCIOS' },
@@ -40,6 +41,12 @@ function setPalette(id){
   else document.documentElement.setAttribute('data-palette', id);
   try{ localStorage.setItem('ryu-palette', id); }catch(e){}
   if(currentPage==='configuracion') setTimeout(()=>go('configuracion'), 40);
+}
+function maoTab(id){
+  document.querySelectorAll('.ptab[data-tab]').forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
+  document.querySelectorAll('.mao-panel').forEach(p=>p.style.display='none');
+  const panel=document.getElementById('mao-'+id);
+  if(panel) panel.style.display='';
 }
 
 /* ---------- helpers ---------- */
@@ -406,6 +413,117 @@ const PAGES = {
       ['"Lo que no me mata me fortalece"','Nietzsche','Crepúsculo de los ídolos','Ética'],
     ])}</div>
   </div>`,
+
+  /* ---------------- MANOS A LA OBRA ---------------- */
+  'manos-obra':()=>{
+    const vietnam = [
+      { titulo:'Coro de la iglesia', area:'Fe', firmeza:'ABSOLUTO', fecha:'2024', veces:1,
+        por:'Participé a pesar de tenerlo anotado. Un amigo insistió en que "esta vez sería diferente". No lo fue — él mismo está a punto de renunciar y es un desastre absoluto. Es el único registro que rompí, y quedó demostrado que nunca debí hacerlo.',
+        trampa:'Cuando alguien de confianza dice "esta vez va a ser diferente" o "solo por esta temporada". La insistencia del otro es la señal de peligro, no la razón para ceder.' },
+      { titulo:'Aportes económicos a la iglesia', area:'Finanzas', firmeza:'ABSOLUTO', fecha:'2025', veces:0,
+        por:'Este año van $10M aportados. Termino con la alegría del que da, pero con frustración, sensación de que no se lo merecen y con peleas. El patrón se repite siempre, sin excepción. La generosidad mal dirigida no es virtud, es pérdida de libertad.',
+        trampa:'Ver un problema el domingo y sentir que puedo — y debo — arreglarlo. La generosidad sin estructura se convierte en resentimiento garantizado.' },
+    ];
+
+    const compromisos = [
+      { titulo:'Ser padre presente',                  area:'Familia',     desc:'Prioridad sobre cualquier compromiso profesional o personal. No negociable en ningún escenario.' },
+      { titulo:'Estudiar inglés todos los días',      area:'Aprendizaje', desc:'Mínimo 30 minutos. La racha es el método, no la motivación del momento.' },
+      { titulo:'Practicar un instrumento a diario',   area:'Música',      desc:'No importa la duración. La constancia construye lo que el talento solo no puede.' },
+      { titulo:'No decidir de noche',                 area:'Personal',    desc:'El juicio se nubla después de las 22:00. Dormir y decidir en frío al día siguiente.' },
+      { titulo:'Leer todos los días',                 area:'Mente',       desc:'Aunque sea una página. El hábito importa más que la cantidad.' },
+      { titulo:'Comprometer tiempo antes que dinero', area:'Negocios',    desc:'El tiempo invertido genera aprendizaje. El dinero sin tiempo genera pérdida sin lección.' },
+    ];
+
+    const totalVeces = vietnam.reduce((s,v)=>s+v.veces,0);
+    const absolutos  = vietnam.filter(v=>v.firmeza==='ABSOLUTO').length;
+
+    const vCards = vietnam.map(v=>{
+      const isAbs = v.firmeza==='ABSOLUTO';
+      const vecesHtml = v.veces > 0
+        ? `<span style="font-family:var(--f-mono);font-size:10px;color:var(--accent);margin-left:auto">● ${v.veces} vez caído</span>`
+        : `<span style="font-family:var(--f-mono);font-size:10px;color:var(--muted);margin-left:auto">● limpio</span>`;
+      return `<div class="card c-6" style="--bc:var(--accent)">
+        <div class="card-head">
+          <span class="card-label"><i></i>${v.titulo.toUpperCase()}</span>
+          <span class="card-tag" style="${isAbs?'color:var(--accent);border-color:var(--accent-w)':''}">${v.firmeza}</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">
+          <span class="chip on">${v.area}</span>
+          <span class="chip">${v.fecha}</span>
+          ${vecesHtml}
+        </div>
+        <p style="font-size:13px;line-height:1.7;color:var(--ink-soft);font-weight:300;margin-bottom:20px;">${v.por}</p>
+        <div style="border-top:1px solid var(--line);padding-top:14px;">
+          <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.16em;color:var(--accent);margin-bottom:8px;text-transform:uppercase">▸ La trampa</div>
+          <p style="font-size:12.5px;line-height:1.65;color:var(--muted);font-style:italic;">"${v.trampa}"</p>
+        </div>
+      </div>`;
+    }).join('');
+
+    const cCards = compromisos.map(c=>`<div class="card c-4">
+      ${cl(c.titulo.toUpperCase(), c.area)}
+      <p style="font-size:13px;line-height:1.65;color:var(--muted);font-weight:300;margin-top:6px;">${c.desc}</p>
+    </div>`).join('');
+
+    const rachasHtml = `
+      <div class="grid">
+        ${kpi('RACHA INGLÉS','34d','récord personal','up','c-3')}
+        ${kpi('RACHA GUITARRA','15d','récord 22d','up','c-3')}
+        ${kpi('RACHA LECTURA','21d','récord personal','up','c-3')}
+        ${kpi('HÁBITOS ACTIVOS','5/5','todos en racha','up','c-3')}
+      </div>
+      <div class="sec-title">MAPA DE CONSTANCIA · 60 DÍAS</div>
+      <div class="grid">
+        <div class="card c-12">${cl('TODOS LOS DOMINIOS','CALOR DE ACTIVIDAD')}
+          <div style="margin:6px 0 18px">${heat(120)}</div>
+          <div class="kpi-row">
+            <div class="kpi"><div class="k-val">34</div><div class="k-lab">INGLÉS</div></div>
+            <div class="kpi"><div class="k-val">21</div><div class="k-lab">LECTURA</div></div>
+            <div class="kpi"><div class="k-val">15</div><div class="k-lab">GUITARRA</div></div>
+            <div class="kpi"><div class="k-val">12</div><div class="k-lab">BAJO</div></div>
+            <div class="kpi"><div class="k-val">9</div><div class="k-lab">PIANO</div></div>
+            <div class="kpi"><div class="k-val">21</div><div class="k-lab">HÁBITOS</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="sec-title">DETALLE POR ÁREA</div>
+      <div class="grid">
+        <div class="card c-4">${cl('IDIOMA','INGLÉS')}${prog('Constancia',96)}${prog('Meta semanal',88)}<div class="metric-sub" style="margin-top:12px">Racha actual: <b style="color:var(--ink)">34 días</b></div></div>
+        <div class="card c-4">${cl('MÚSICA','INSTRUMENTOS')}${prog('Guitarra · 15d',68)}${prog('Bajo · 12d',55)}${prog('Piano · 9d',41)}</div>
+        <div class="card c-4">${cl('MENTE','LECTURA')}${prog('Constancia',94)}${prog('Comprensión activa',75)}<div class="metric-sub" style="margin-top:12px">Racha actual: <b style="color:var(--ink)">21 días</b></div></div>
+      </div>`;
+
+    return `
+      ${head('PRINCIPAL · ACCIÓN','Manos a la obra','Donde la inteligencia se convierte en movimiento. Lo que aprendiste. Lo que te comprometes. Lo que no debes olvidar.',[btn('+ Agregar','accent')])}
+      <div class="ptabs">
+        <div class="ptab active" data-tab="vietnam" onclick="maoTab('vietnam')">No olvides Vietnam</div>
+        <div class="ptab" data-tab="compromisos" onclick="maoTab('compromisos')">Compromisos</div>
+        <div class="ptab" data-tab="rachas" onclick="maoTab('rachas')">Rachas</div>
+      </div>
+
+      <div id="mao-vietnam" class="mao-panel">
+        <div class="grid" style="margin-bottom:var(--gap)">
+          <div class="card c-12">${cl('REGISTRO · LECCIONES APRENDIDAS A FUERZA DE GOLPES','')}
+            <div class="kpi-row">
+              <div class="kpi"><div class="k-val">${vietnam.length}</div><div class="k-lab">ENTRADAS</div></div>
+              <div class="kpi"><div class="k-val">${absolutos}</div><div class="k-lab">ABSOLUTOS</div></div>
+              <div class="kpi"><div class="k-val">${vietnam.length-absolutos}</div><div class="k-lab">CONDICIONALES</div></div>
+              <div class="kpi"><div class="k-val" style="color:${totalVeces>0?'var(--accent)':'var(--ink)'}">${totalVeces}</div><div class="k-lab">VECES CAÍDO</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="grid">${vCards}</div>
+      </div>
+
+      <div id="mao-compromisos" class="mao-panel" style="display:none">
+        <div class="grid">${cCards}</div>
+      </div>
+
+      <div id="mao-rachas" class="mao-panel" style="display:none">
+        ${rachasHtml}
+      </div>
+    `;
+  },
 
   /* ---------------- CONFIGURACIÓN ---------------- */
   configuracion:()=>{
