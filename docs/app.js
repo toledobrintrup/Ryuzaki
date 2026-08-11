@@ -42,7 +42,9 @@ function setPalette(id){
   try{ localStorage.setItem('ryu-palette', id); }catch(e){}
   if(currentPage==='configuracion') setTimeout(()=>go('configuracion'), 40);
 }
+let maoActiveTab = 'vietnam';
 function maoTab(id){
+  maoActiveTab = id;
   document.querySelectorAll('.ptab[data-tab]').forEach(t=>t.classList.toggle('active', t.dataset.tab===id));
   document.querySelectorAll('.mao-panel').forEach(p=>p.style.display='none');
   const panel=document.getElementById('mao-'+id);
@@ -69,6 +71,7 @@ function prog(label,pct){ return `<div class="prog"><div class="prog-top"><span>
 function kpi(label,val,sub,dir,col){ return `<div class="card ${col}">${cl(label,'')}<div class="metric sm">${val}</div><div class="metric-sub"><span class="delta ${dir==='up'?'up':'down'}">${dir==='up'?'▲':'▼'}</span>${sub}</div></div>`; }
 function table(cols,rows){ return `<table class="tbl"><thead><tr>${cols.map((c,i)=>`<th class="${i===cols.length-1?'num':''}">${c}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${i===r.length-1?'num':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`; }
 function art(cat,title,excerpt,meta){ return `<div class="card c-4 art"><div class="art-cat">${cat}</div><div class="art-title">${title}</div><div class="art-excerpt">${excerpt}</div><div class="art-meta">${meta}<span class="art-arrow">→</span></div></div>`; }
+function areaSummaryChips(data,field='area'){const counts={};data.forEach(d=>{if(d[field])counts[d[field]]=(counts[d[field]]||0)+1;});return Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([a,n])=>`<span class="chip on">${a}<span style="font-family:var(--f-mono);font-size:9px;opacity:.5;margin-left:3px">${n}</span></span>`).join('');}
 
 /* instrument page builder (Bajo / Piano / Guitarra) */
 function instrPage(c){ return `
@@ -86,6 +89,122 @@ function instrPage(c){ return `
     <div class="card c-8">${cl('REPERTORIO','')}${table(['CANCIÓN','ARTISTA','ESTADO'],c.rep)}</div>
     <div class="card c-4">${cl('OBJETIVOS','')}<div class="list">${c.goals.map(g=>li('',g[0],g[1],g[2])).join('')}</div></div>
   </div>`;
+}
+
+/* ---------- manos a la obra · data + modal ---------- */
+let MAO_VIETNAM = [
+  { titulo:'Coro de la iglesia', area:'Fe', firmeza:'ABSOLUTO', fecha:'2024', veces:1,
+    por:'Participé a pesar de tenerlo anotado. Un amigo insistió en que "esta vez sería diferente". No lo fue — él mismo está a punto de renunciar y es un desastre absoluto. Es el único registro que rompí, y quedó demostrado que nunca debí hacerlo.',
+    trampa:'Cuando alguien de confianza dice "esta vez va a ser diferente" o "solo por esta temporada". La insistencia del otro es la señal de peligro, no la razón para ceder.' },
+  { titulo:'Aportes económicos a la iglesia', area:'Finanzas', firmeza:'ABSOLUTO', fecha:'2025', veces:0,
+    por:'Este año van $10M aportados. Termino con la alegría del que da, pero con frustración, sensación de que no se lo merecen y con peleas. El patrón se repite siempre, sin excepción. La generosidad mal dirigida no es virtud, es pérdida de libertad.',
+    trampa:'Ver un problema el domingo y sentir que puedo — y debo — arreglarlo. La generosidad sin estructura se convierte en resentimiento garantizado.' },
+];
+let MAO_COMPROMISOS = [
+  { titulo:'Ser padre presente',                  area:'Familia',     desc:'Prioridad sobre cualquier compromiso profesional o personal. No negociable en ningún escenario.' },
+  { titulo:'Estudiar inglés todos los días',      area:'Aprendizaje', desc:'Mínimo 30 minutos. La racha es el método, no la motivación del momento.' },
+  { titulo:'Practicar un instrumento a diario',   area:'Música',      desc:'No importa la duración. La constancia construye lo que el talento solo no puede.' },
+  { titulo:'No decidir de noche',                 area:'Personal',    desc:'El juicio se nubla después de las 22:00. Dormir y decidir en frío al día siguiente.' },
+  { titulo:'Leer todos los días',                 area:'Mente',       desc:'Aunque sea una página. El hábito importa más que la cantidad.' },
+  { titulo:'Comprometer tiempo antes que dinero', area:'Negocios',    desc:'El tiempo invertido genera aprendizaje. El dinero sin tiempo genera pérdida sin lección.' },
+];
+function maoLoad(){
+  try{
+    const v=localStorage.getItem('ryu-mao-v'); if(v) MAO_VIETNAM=JSON.parse(v);
+    const c=localStorage.getItem('ryu-mao-c'); if(c) MAO_COMPROMISOS=JSON.parse(c);
+  }catch(e){}
+}
+function maoSave(){
+  try{
+    localStorage.setItem('ryu-mao-v',JSON.stringify(MAO_VIETNAM));
+    localStorage.setItem('ryu-mao-c',JSON.stringify(MAO_COMPROMISOS));
+  }catch(e){}
+}
+function showToast(msg){
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:var(--surface-2);border:1px solid var(--line-2);color:var(--ink-soft);font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;padding:10px 20px;border-radius:30px;z-index:300;pointer-events:none;opacity:0;transition:opacity .2s';
+  t.textContent=msg; document.body.appendChild(t);
+  requestAnimationFrame(()=>{ t.style.opacity='1'; });
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),200); },2500);
+}
+function ensureMaoModal(){
+  if(document.getElementById('mao-modal')) return;
+  const m=document.createElement('div'); m.id='mao-modal';
+  m.style.cssText='display:none;position:fixed;inset:0;z-index:200;align-items:center;justify-content:center;background:rgba(0,0,0,.72);backdrop-filter:blur(4px)';
+  m.innerHTML=`
+    <div id="mao-mbox" style="background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:28px 32px;width:min(560px,92vw);max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-h)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px">
+        <div>
+          <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:4px">NUEVA ENTRADA</div>
+          <div id="mao-m-title" style="font-size:17px;font-weight:600;color:var(--ink)"></div>
+        </div>
+        <button onclick="closeMaoModal()" style="background:none;border:1px solid var(--line-2);border-radius:6px;color:var(--muted);font-size:14px;cursor:pointer;padding:5px 9px;line-height:1;margin-top:2px">✕</button>
+      </div>
+      <div id="mao-m-body"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:22px;padding-top:16px;border-top:1px solid var(--line)">
+        <button class="btn" onclick="closeMaoModal()">Cancelar</button>
+        <button class="btn accent" onclick="submitMaoEntry()">Guardar entrada</button>
+      </div>
+    </div>`;
+  m.addEventListener('click',e=>{ if(e.target===m) closeMaoModal(); });
+  document.body.appendChild(m);
+}
+function openMaoModal(){
+  if(maoActiveTab==='rachas'){ showToast('Las rachas se generan desde cada sección automáticamente'); return; }
+  ensureMaoModal();
+  const modal=document.getElementById('mao-modal');
+  document.getElementById('mao-m-title').textContent=maoActiveTab==='vietnam'?'No olvides Vietnam':'Compromisos';
+  const body=document.getElementById('mao-m-body');
+  if(maoActiveTab==='vietnam'){
+    body.innerHTML=`<div style="display:flex;flex-direction:column;gap:16px">
+      <div><label class="form-label">Situación / título</label><input type="text" id="mf-titulo" class="form-input" placeholder="Ej. Coro de la iglesia"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="form-label">Área</label><input type="text" id="mf-area" class="form-input" placeholder="Fe, Finanzas, Familia…"></div>
+        <div><label class="form-label">Año</label><input type="text" id="mf-fecha" class="form-input" placeholder="${new Date().getFullYear()}"></div>
+      </div>
+      <div><label class="form-label">Firmeza</label>
+        <div style="display:flex;gap:20px;margin-top:6px">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px"><input type="radio" name="mf-firmeza" value="ABSOLUTO" checked><span style="font-family:var(--f-mono);color:var(--accent)">ABSOLUTO</span></label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px"><input type="radio" name="mf-firmeza" value="CONDICIONAL"><span style="font-family:var(--f-mono);color:var(--ink-soft)">CONDICIONAL</span></label>
+        </div>
+      </div>
+      <div><label class="form-label">¿Por qué lo aprendiste?</label><textarea id="mf-por" class="form-input form-textarea" rows="3" placeholder="Qué pasó, qué sentiste, qué quedó demostrado…"></textarea></div>
+      <div><label class="form-label">La trampa — ¿cómo te atrapó? ¿cómo reconocerla?</label><textarea id="mf-trampa" class="form-input form-textarea" rows="2" placeholder="La señal de alerta que debes detectar a tiempo…"></textarea></div>
+    </div>`;
+  } else {
+    body.innerHTML=`<div style="display:flex;flex-direction:column;gap:16px">
+      <div><label class="form-label">Compromiso</label><input type="text" id="mf-titulo" class="form-input" placeholder="Ej. Leer todos los días"></div>
+      <div><label class="form-label">Área</label><input type="text" id="mf-area" class="form-input" placeholder="Familia, Mente, Música, Personal…"></div>
+      <div><label class="form-label">Descripción</label><textarea id="mf-desc" class="form-input form-textarea" rows="3" placeholder="Por qué importa. Qué implica concretamente."></textarea></div>
+    </div>`;
+  }
+  modal.style.display='flex';
+  setTimeout(()=>document.getElementById('mf-titulo')?.focus(),50);
+}
+function closeMaoModal(){
+  const m=document.getElementById('mao-modal'); if(m) m.style.display='none';
+}
+function submitMaoEntry(){
+  const tab=maoActiveTab;
+  const titulo=document.getElementById('mf-titulo')?.value?.trim();
+  const area=document.getElementById('mf-area')?.value?.trim();
+  const ti=document.getElementById('mf-titulo'); const ai=document.getElementById('mf-area');
+  if(ti) ti.style.borderColor=titulo?'':'var(--accent)';
+  if(ai) ai.style.borderColor=area?'':'var(--accent)';
+  if(!titulo||!area) return;
+  if(tab==='vietnam'){
+    const firmeza=document.querySelector('input[name="mf-firmeza"]:checked')?.value||'ABSOLUTO';
+    const fecha=document.getElementById('mf-fecha')?.value?.trim()||String(new Date().getFullYear());
+    const por=document.getElementById('mf-por')?.value?.trim()||'';
+    const trampa=document.getElementById('mf-trampa')?.value?.trim()||'';
+    MAO_VIETNAM.push({titulo,area,firmeza,fecha,veces:0,por,trampa});
+  } else {
+    const desc=document.getElementById('mf-desc')?.value?.trim()||'';
+    MAO_COMPROMISOS.push({titulo,area,desc});
+  }
+  maoSave(); closeMaoModal();
+  go('manos-obra');
+  setTimeout(()=>maoTab(tab),10);
 }
 
 /* ============================================================
@@ -416,23 +535,9 @@ const PAGES = {
 
   /* ---------------- MANOS A LA OBRA ---------------- */
   'manos-obra':()=>{
-    const vietnam = [
-      { titulo:'Coro de la iglesia', area:'Fe', firmeza:'ABSOLUTO', fecha:'2024', veces:1,
-        por:'Participé a pesar de tenerlo anotado. Un amigo insistió en que "esta vez sería diferente". No lo fue — él mismo está a punto de renunciar y es un desastre absoluto. Es el único registro que rompí, y quedó demostrado que nunca debí hacerlo.',
-        trampa:'Cuando alguien de confianza dice "esta vez va a ser diferente" o "solo por esta temporada". La insistencia del otro es la señal de peligro, no la razón para ceder.' },
-      { titulo:'Aportes económicos a la iglesia', area:'Finanzas', firmeza:'ABSOLUTO', fecha:'2025', veces:0,
-        por:'Este año van $10M aportados. Termino con la alegría del que da, pero con frustración, sensación de que no se lo merecen y con peleas. El patrón se repite siempre, sin excepción. La generosidad mal dirigida no es virtud, es pérdida de libertad.',
-        trampa:'Ver un problema el domingo y sentir que puedo — y debo — arreglarlo. La generosidad sin estructura se convierte en resentimiento garantizado.' },
-    ];
-
-    const compromisos = [
-      { titulo:'Ser padre presente',                  area:'Familia',     desc:'Prioridad sobre cualquier compromiso profesional o personal. No negociable en ningún escenario.' },
-      { titulo:'Estudiar inglés todos los días',      area:'Aprendizaje', desc:'Mínimo 30 minutos. La racha es el método, no la motivación del momento.' },
-      { titulo:'Practicar un instrumento a diario',   area:'Música',      desc:'No importa la duración. La constancia construye lo que el talento solo no puede.' },
-      { titulo:'No decidir de noche',                 area:'Personal',    desc:'El juicio se nubla después de las 22:00. Dormir y decidir en frío al día siguiente.' },
-      { titulo:'Leer todos los días',                 area:'Mente',       desc:'Aunque sea una página. El hábito importa más que la cantidad.' },
-      { titulo:'Comprometer tiempo antes que dinero', area:'Negocios',    desc:'El tiempo invertido genera aprendizaje. El dinero sin tiempo genera pérdida sin lección.' },
-    ];
+    maoActiveTab = 'vietnam';
+    const vietnam    = MAO_VIETNAM;
+    const compromisos = MAO_COMPROMISOS;
 
     const totalVeces = vietnam.reduce((s,v)=>s+v.veces,0);
     const absolutos  = vietnam.filter(v=>v.firmeza==='ABSOLUTO').length;
@@ -494,7 +599,30 @@ const PAGES = {
       </div>`;
 
     return `
-      ${head('PRINCIPAL · ACCIÓN','Manos a la obra','Donde la inteligencia se convierte en movimiento. Lo que aprendiste. Lo que te comprometes. Lo que no debes olvidar.',[btn('+ Agregar','accent')])}
+      ${head('PRINCIPAL · ACCIÓN','Manos a la obra','Donde la inteligencia se convierte en movimiento. Lo que aprendiste. Lo que te comprometes. Lo que no debes olvidar.',['<button class="btn accent" onclick="openMaoModal()">+ Agregar</button>'])}
+
+      <div class="grid" style="margin-bottom:var(--gap)">
+        <div class="card c-4">
+          ${cl('NO OLVIDES VIETNAM', `${vietnam.length} ENTRADA${vietnam.length!==1?'S':''}`)}
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${areaSummaryChips(vietnam)}</div>
+          <div style="margin-top:12px;font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;color:${totalVeces>0?'var(--accent)':'var(--muted)'}">
+            ${absolutos} ABSOLUTO${absolutos!==1?'S':''} · ${totalVeces} VEZ${totalVeces!==1?'ES':''} CAÍDO
+          </div>
+        </div>
+        <div class="card c-4">
+          ${cl('COMPROMISOS', `${compromisos.length} ACTIVOS`)}
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${areaSummaryChips(compromisos)}</div>
+        </div>
+        <div class="card c-4">
+          ${cl('RACHAS', 'TOP 3 ACTIVAS')}
+          <div class="kpi-row" style="margin-top:12px">
+            <div class="kpi"><div class="k-val" style="font-size:20px;color:var(--good)">34d</div><div class="k-lab">INGLÉS</div></div>
+            <div class="kpi"><div class="k-val" style="font-size:20px;color:var(--good)">21d</div><div class="k-lab">LECTURA</div></div>
+            <div class="kpi"><div class="k-val" style="font-size:20px;color:var(--good)">15d</div><div class="k-lab">GUITARRA</div></div>
+          </div>
+        </div>
+      </div>
+
       <div class="ptabs">
         <div class="ptab active" data-tab="vietnam" onclick="maoTab('vietnam')">No olvides Vietnam</div>
         <div class="ptab" data-tab="compromisos" onclick="maoTab('compromisos')">Compromisos</div>
@@ -647,6 +775,7 @@ function boot(){
 /* ============================================================
    INIT
    ============================================================ */
+maoLoad();
 buildNav();
 go('dashboard');
 document.querySelector('.logo').addEventListener('click',()=>go('dashboard'));
