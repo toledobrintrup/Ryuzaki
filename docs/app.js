@@ -108,17 +108,42 @@ let MAO_COMPROMISOS = [
   { titulo:'Leer todos los días',                 area:'Mente',       desc:'Aunque sea una página. El hábito importa más que la cantidad.' },
   { titulo:'Comprometer tiempo antes que dinero', area:'Negocios',    desc:'El tiempo invertido genera aprendizaje. El dinero sin tiempo genera pérdida sin lección.' },
 ];
-function maoLoad(){
+const SUPA_URL = 'https://lddonylokjrfnbzrbpts.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkZG9ueWxva2pyZm5ienJicHRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1MzgzNTEsImV4cCI6MjEwMjExNDM1MX0.4zGW9NlglbBecdwzHPiHcnwiR2pz1cTLGMxd_JEUKqs';
+let _supa = null;
+function getDb(){ if(!_supa && window.supabase) _supa=window.supabase.createClient(SUPA_URL,SUPA_KEY); return _supa; }
+
+async function maoLoad(){
+  const db=getDb(); if(!db) return;
   try{
-    const v=localStorage.getItem('ryu-mao-v'); if(v) MAO_VIETNAM=JSON.parse(v);
-    const c=localStorage.getItem('ryu-mao-c'); if(c) MAO_COMPROMISOS=JSON.parse(c);
-  }catch(e){}
+    const [{ data:v },{ data:c }]=await Promise.all([
+      db.from('vietnam').select('*').order('created_at'),
+      db.from('compromisos').select('*').order('orden')
+    ]);
+    if(v?.length) MAO_VIETNAM=v.map(r=>({_id:r.id,decision:r.decision,area:r.area,firmeza:r.firmeza,fecha:r.fecha,veces:r.veces,por:r.por,trampa:r.trampa}));
+    if(c?.length) MAO_COMPROMISOS=c.map(r=>({_id:r.id,titulo:r.titulo,area:r.area,desc:r.descripcion}));
+  }catch(e){ console.error('maoLoad:',e); }
 }
-function maoSave(){
+async function maoSave(){
+  const db=getDb(); if(!db) return;
   try{
-    localStorage.setItem('ryu-mao-v',JSON.stringify(MAO_VIETNAM));
-    localStorage.setItem('ryu-mao-c',JSON.stringify(MAO_COMPROMISOS));
-  }catch(e){}
+    for(const v of MAO_VIETNAM){
+      if(!v._id){
+        const { data }=await db.from('vietnam').insert({decision:v.decision,area:v.area,firmeza:v.firmeza,fecha:v.fecha,veces:v.veces,por:v.por,trampa:v.trampa}).select('id').single();
+        if(data) v._id=data.id;
+      } else {
+        await db.from('vietnam').update({decision:v.decision,area:v.area,firmeza:v.firmeza,fecha:v.fecha,veces:v.veces,por:v.por,trampa:v.trampa}).eq('id',v._id);
+      }
+    }
+    for(const c of MAO_COMPROMISOS){
+      if(!c._id){
+        const { data }=await db.from('compromisos').insert({titulo:c.titulo,area:c.area,descripcion:c.desc}).select('id').single();
+        if(data) c._id=data.id;
+      } else {
+        await db.from('compromisos').update({titulo:c.titulo,area:c.area,descripcion:c.desc}).eq('id',c._id);
+      }
+    }
+  }catch(e){ console.error('maoSave:',e); }
 }
 function showToast(msg){
   const t=document.createElement('div');
@@ -793,7 +818,7 @@ function boot(){
 /* ============================================================
    INIT
    ============================================================ */
-maoLoad();
+maoLoad(); // async, carga desde Supabase en segundo plano
 buildNav();
 go('dashboard');
 document.querySelector('.logo').addEventListener('click',()=>go('dashboard'));
