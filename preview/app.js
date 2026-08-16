@@ -94,11 +94,15 @@ function instrPage(c){ return `
 /* ---------- manos a la obra · data + modal ---------- */
 let MAO_VIETNAM = [
   { decision:'No entrar al coro de la iglesia nunca más', area:'Fe', firmeza:'ABSOLUTO', fecha:'2024', veces:1,
-    por:'Participé a pesar de tenerlo anotado. Un amigo insistió en que "esta vez sería diferente". No lo fue — él mismo está a punto de renunciar y es un desastre absoluto. Es el único registro que rompí, y quedó demostrado que nunca debí hacerlo.',
-    trampa:'Cuando alguien de confianza dice "esta vez va a ser diferente" o "solo por esta temporada". La insistencia del otro es la señal de peligro, no la razón para ceder.' },
+    que_paso:'',
+    por_que_termina:'Participé a pesar de tenerlo anotado. Un amigo insistió en que "esta vez sería diferente". No lo fue — él mismo está a punto de renunciar y es un desastre absoluto. Es el único registro que rompí, y quedó demostrado que nunca debí hacerlo.',
+    por_que_caigo:'Cuando alguien de confianza dice "esta vez va a ser diferente" o "solo por esta temporada". La insistencia del otro es la señal de peligro, no la razón para ceder.',
+    que_costo:'' },
   { decision:'No aportar económicamente a la iglesia', area:'Finanzas', firmeza:'ABSOLUTO', fecha:'2025', veces:0,
-    por:'Este año van $10M aportados. Termino con la alegría del que da, pero con frustración, sensación de que no se lo merecen y con peleas. El patrón se repite siempre, sin excepción. La generosidad mal dirigida no es virtud, es pérdida de libertad.',
-    trampa:'Ver un problema el domingo y sentir que puedo — y debo — arreglarlo. La generosidad sin estructura se convierte en resentimiento garantizado.' },
+    que_paso:'',
+    por_que_termina:'Este año van $10M aportados. Termino con la alegría del que da, pero con frustración, sensación de que no se lo merecen y con peleas. El patrón se repite siempre, sin excepción. La generosidad mal dirigida no es virtud, es pérdida de libertad.',
+    por_que_caigo:'Ver un problema el domingo y sentir que puedo — y debo — arreglarlo. La generosidad sin estructura se convierte en resentimiento garantizado.',
+    que_costo:'' },
 ];
 let MAO_COMPROMISOS = [
   { titulo:'Ser padre presente',                  area:'Familia',     desc:'Prioridad sobre cualquier compromiso profesional o personal. No negociable en ningún escenario.' },
@@ -120,7 +124,7 @@ async function maoLoad(){
       db.from('vietnam').select('*').order('created_at'),
       db.from('compromisos').select('*').order('orden')
     ]);
-    if(v?.length) MAO_VIETNAM=v.map(r=>({_id:r.id,decision:r.decision,area:r.area,firmeza:r.firmeza,fecha:r.fecha,veces:r.veces,por:r.por,trampa:r.trampa}));
+    if(v?.length) MAO_VIETNAM=v.map(r=>({_id:r.id,decision:r.decision,area:r.area,firmeza:r.firmeza,fecha:r.fecha,veces:r.veces,que_paso:r.que_paso,por_que_termina:r.por_que_termina,por_que_caigo:r.por_que_caigo,que_costo:r.que_costo}));
     if(c?.length) MAO_COMPROMISOS=c.map(r=>({_id:r.id,titulo:r.titulo,area:r.area,desc:r.descripcion}));
   }catch(e){ console.error('maoLoad:',e); }
 }
@@ -128,11 +132,12 @@ async function maoSave(){
   const db=getDb(); if(!db) return;
   try{
     for(const v of MAO_VIETNAM){
+      const row={decision:v.decision,area:v.area,firmeza:v.firmeza,fecha:v.fecha,veces:v.veces,que_paso:v.que_paso,por_que_termina:v.por_que_termina,por_que_caigo:v.por_que_caigo,que_costo:v.que_costo};
       if(!v._id){
-        const { data }=await db.from('vietnam').insert({decision:v.decision,area:v.area,firmeza:v.firmeza,fecha:v.fecha,veces:v.veces,por:v.por,trampa:v.trampa}).select('id').single();
+        const { data }=await db.from('vietnam').insert(row).select('id').single();
         if(data) v._id=data.id;
       } else {
-        await db.from('vietnam').update({decision:v.decision,area:v.area,firmeza:v.firmeza,fecha:v.fecha,veces:v.veces,por:v.por,trampa:v.trampa}).eq('id',v._id);
+        await db.from('vietnam').update(row).eq('id',v._id);
       }
     }
     for(const c of MAO_COMPROMISOS){
@@ -178,14 +183,14 @@ function openMaoModal(){
   if(maoActiveTab==='rachas'){ showToast('Las rachas se generan desde cada sección automáticamente'); return; }
   ensureMaoModal();
   const modal=document.getElementById('mao-modal');
-  document.getElementById('mao-m-title').textContent=maoActiveTab==='vietnam'?'No olvides Vietnam':'Compromisos';
+  document.getElementById('mao-m-title').textContent=maoActiveTab==='vietnam'?'No te olvides de Vietnam':'Compromisos';
   const body=document.getElementById('mao-m-body');
   if(maoActiveTab==='vietnam'){
     body.innerHTML=`<div style="display:flex;flex-direction:column;gap:16px">
-      <div><label class="form-label">Decisión — ¿qué NO harás?</label><input type="text" id="mf-titulo" class="form-input" placeholder="Ej. No entrar al coro de la iglesia nunca más"></div>
+      <div><label class="form-label">Título — la línea roja</label><input type="text" id="mf-titulo" class="form-input" placeholder="Ej. No volver a entrar al coro de la iglesia"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div><label class="form-label">Área</label><input type="text" id="mf-area" class="form-input" placeholder="Fe, Finanzas, Familia…"></div>
-        <div><label class="form-label">Año</label><input type="text" id="mf-fecha" class="form-input" placeholder="${new Date().getFullYear()}"></div>
+        <div><label class="form-label">Fecha de decisión</label><input type="text" id="mf-fecha" class="form-input" placeholder="${new Date().getFullYear()}"></div>
       </div>
       <div><label class="form-label">Firmeza</label>
         <div style="display:flex;gap:20px;margin-top:6px">
@@ -193,8 +198,10 @@ function openMaoModal(){
           <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px"><input type="radio" name="mf-firmeza" value="CONDICIONAL"><span style="font-family:var(--f-mono);color:var(--ink-soft)">CONDICIONAL</span></label>
         </div>
       </div>
-      <div><label class="form-label">¿Por qué lo aprendiste?</label><textarea id="mf-por" class="form-input form-textarea" rows="3" placeholder="Qué pasó, qué sentiste, qué quedó demostrado…"></textarea></div>
-      <div><label class="form-label">La trampa — ¿cómo te atrapó? ¿cómo reconocerla?</label><textarea id="mf-trampa" class="form-input form-textarea" rows="2" placeholder="La señal de alerta que debes detectar a tiempo…"></textarea></div>
+      <div><label class="form-label">Qué pasó</label><textarea id="mf-quepaso" class="form-input form-textarea" rows="3" placeholder="El contexto factual: qué ocurrió, cuándo, con quién."></textarea></div>
+      <div><label class="form-label">Por qué se termina</label><textarea id="mf-termina" class="form-input form-textarea" rows="3" placeholder="El razonamiento central: por qué esto ya no debe repetirse."></textarea></div>
+      <div><label class="form-label">Por qué caigo</label><textarea id="mf-caigo" class="form-input form-textarea" rows="2" placeholder="Qué te hace volver, ceder o racionalizar. La señal de alerta."></textarea></div>
+      <div><label class="form-label">Qué me costó aprenderlo</label><textarea id="mf-costo" class="form-input form-textarea" rows="2" placeholder="Tiempo, dinero, energía, foco, relaciones, oportunidades…"></textarea></div>
     </div>`;
   } else {
     body.innerHTML=`<div style="display:flex;flex-direction:column;gap:16px">
@@ -220,9 +227,10 @@ function submitMaoEntry(){
   if(tab==='vietnam'){
     const firmeza=document.querySelector('input[name="mf-firmeza"]:checked')?.value||'ABSOLUTO';
     const fecha=document.getElementById('mf-fecha')?.value?.trim()||String(new Date().getFullYear());
-    const por=document.getElementById('mf-por')?.value?.trim()||'';
-    const trampa=document.getElementById('mf-trampa')?.value?.trim()||'';
-    MAO_VIETNAM.push({decision:titulo,area,firmeza,fecha,veces:0,por,trampa});
+    const g=id=>document.getElementById(id)?.value?.trim()||'';
+    MAO_VIETNAM.push({decision:titulo,area,firmeza,fecha,veces:0,
+      que_paso:g('mf-quepaso'),por_que_termina:g('mf-termina'),
+      por_que_caigo:g('mf-caigo'),que_costo:g('mf-costo')});
   } else {
     const desc=document.getElementById('mf-desc')?.value?.trim()||'';
     MAO_COMPROMISOS.push({titulo,area,desc});
@@ -573,6 +581,12 @@ const PAGES = {
       const vecesHtml = v.veces > 0
         ? `<span style="font-family:var(--f-mono);font-size:10px;color:var(--accent)">● ${v.veces} vez caído</span>`
         : `<span style="font-family:var(--f-mono);font-size:10px;color:var(--muted)">● limpio</span>`;
+      const bloque=(label,texto,estilo='')=> texto
+        ? `<div style="border-top:1px solid var(--line);padding-top:14px;margin-top:14px">
+             <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.16em;color:var(--accent);margin-bottom:8px;text-transform:uppercase">▸ ${label}</div>
+             <p style="font-size:12.5px;line-height:1.7;color:var(--ink-soft);font-weight:300;${estilo}">${texto}</p>
+           </div>`
+        : '';
       return `<div class="card c-6" style="--bc:var(--accent)">
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
           <span class="chip on">${v.area}</span>
@@ -580,12 +594,11 @@ const PAGES = {
           <span class="card-tag" style="margin-left:auto;${isAbs?'color:var(--accent);border-color:var(--accent-w)':''}">${v.firmeza}</span>
         </div>
         <p style="font-size:16px;font-weight:600;color:var(--ink);line-height:1.4;margin-bottom:10px;">${dec}</p>
-        <div style="display:flex;justify-content:flex-end;margin-bottom:16px">${vecesHtml}</div>
-        <p style="font-size:13px;line-height:1.7;color:var(--ink-soft);font-weight:300;margin-bottom:20px;">${v.por}</p>
-        <div style="border-top:1px solid var(--line);padding-top:14px;">
-          <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.16em;color:var(--accent);margin-bottom:8px;text-transform:uppercase">▸ La trampa</div>
-          <p style="font-size:12.5px;line-height:1.65;color:var(--muted);font-style:italic;">"${v.trampa}"</p>
-        </div>
+        <div style="display:flex;justify-content:flex-end">${vecesHtml}</div>
+        ${bloque('Qué pasó', v.que_paso)}
+        ${bloque('Por qué se termina', v.por_que_termina)}
+        ${bloque('Por qué caigo', v.por_que_caigo, 'color:var(--muted);font-style:italic')}
+        ${bloque('Qué me costó aprenderlo', v.que_costo)}
       </div>`;
     }).join('');
 
@@ -627,7 +640,7 @@ const PAGES = {
 
       <div class="grid" style="margin-bottom:var(--gap)">
         <div class="card c-12">
-          ${cl('NO OLVIDES VIETNAM', `${vietnam.length} ENTRADA${vietnam.length!==1?'S':''}`)}
+          ${cl('NO TE OLVIDES DE VIETNAM', `${vietnam.length} ENTRADA${vietnam.length!==1?'S':''}`)}
           <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.1em;color:${totalVeces>0?'var(--accent)':'var(--muted-2)'};margin-bottom:2px">${absolutos} ABSOLUTO${absolutos!==1?'S':''} · ${totalVeces} VEZ${totalVeces!==1?'ES':''} CAÍDO</div>
           ${vietnam.map((v,i)=>{
             const isAbs=v.firmeza==='ABSOLUTO';
@@ -667,7 +680,7 @@ const PAGES = {
       </div>
 
       <div class="ptabs">
-        <div class="ptab active" data-tab="vietnam" onclick="maoTab('vietnam')">No olvides Vietnam</div>
+        <div class="ptab active" data-tab="vietnam" onclick="maoTab('vietnam')">No te olvides de Vietnam</div>
         <div class="ptab" data-tab="compromisos" onclick="maoTab('compromisos')">Compromisos</div>
         <div class="ptab" data-tab="rachas" onclick="maoTab('rachas')">Rachas</div>
       </div>
