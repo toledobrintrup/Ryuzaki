@@ -71,6 +71,30 @@ function prog(label,pct){ return `<div class="prog"><div class="prog-top"><span>
 function kpi(label,val,sub,dir,col){ return `<div class="card ${col}">${cl(label,'')}<div class="metric sm">${val}</div><div class="metric-sub"><span class="delta ${dir==='up'?'up':'down'}">${dir==='up'?'▲':'▼'}</span>${sub}</div></div>`; }
 function table(cols,rows){ return `<table class="tbl"><thead><tr>${cols.map((c,i)=>`<th class="${i===cols.length-1?'num':''}">${c}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${i===r.length-1?'num':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`; }
 function art(cat,title,excerpt,meta){ return `<div class="card c-4 art"><div class="art-cat">${cat}</div><div class="art-title">${title}</div><div class="art-excerpt">${excerpt}</div><div class="art-meta">${meta}<span class="art-arrow">→</span></div></div>`; }
+/* fila de Vietnam · usada en el resumen (compacta) y en la pestaña (con preview) */
+function vietnamRow(v,i,preview){
+  const isAbs = v.firmeza==='ABSOLUTO';
+  const dec   = v.decision||v.titulo||'';
+  const veces = v.veces>0
+    ? `<span style="font-family:var(--f-mono);font-size:9px;color:var(--accent);margin-left:auto;flex:none">● ${v.veces} caído</span>`
+    : `<span style="font-family:var(--f-mono);font-size:9px;color:var(--muted-2);margin-left:auto;flex:none">○</span>`;
+  const prev = preview && v.por_que_termina
+    ? `<p class="vrow-prev">${v.por_que_termina}</p>` : '';
+  return `<div class="vrow" onclick="maoDetail(${i})">
+    <div class="vrow-n">${String(i+1).padStart(2,'0')}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:15px;font-weight:600;color:var(--ink);line-height:1.35;margin-bottom:8px">${dec}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-family:var(--f-mono);font-size:8px;letter-spacing:.1em;color:${isAbs?'var(--accent)':'var(--muted-2)'}">${v.firmeza}</span>
+        <span class="chip on" style="font-size:8px;padding:2px 6px">${v.area}</span>
+        <span style="font-family:var(--f-mono);font-size:8px;color:var(--muted-2)">${v.fecha}</span>
+        ${veces}
+      </div>
+      ${prev}
+    </div>
+    <span class="vrow-arrow">→</span>
+  </div>`;
+}
 function areaSummaryChips(data,field='area'){const counts={};data.forEach(d=>{if(d[field])counts[d[field]]=(counts[d[field]]||0)+1;});return Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([a,n])=>`<span class="chip on">${a}<span style="font-family:var(--f-mono);font-size:9px;opacity:.5;margin-left:3px">${n}</span></span>`).join('');}
 
 /* instrument page builder (Bajo / Piano / Guitarra) */
@@ -215,6 +239,126 @@ function openMaoModal(){
 }
 function closeMaoModal(){
   const m=document.getElementById('mao-modal'); if(m) m.style.display='none';
+}
+
+/* ---------- drawer de detalle · Vietnam ---------- */
+const VIETNAM_CAMPOS = [
+  ['que_paso',        'Qué pasó',                 'El contexto factual: qué ocurrió, cuándo, con quién.'],
+  ['por_que_termina', 'Por qué se termina',       'El razonamiento central: por qué esto ya no debe repetirse.'],
+  ['por_que_caigo',   'Por qué caigo',            'Qué te hace volver, ceder o racionalizar. La señal de alerta.'],
+  ['que_costo',       'Qué me costó aprenderlo',  'Tiempo, dinero, energía, foco, relaciones, oportunidades…'],
+];
+let maoDetailIdx = -1;
+let maoDetailEditing = false;
+let maoDetailConfirmDel = false;
+
+function ensureMaoDrawer(){
+  if(document.getElementById('mao-drawer')) return;
+  const s=document.createElement('div'); s.id='mao-scrim'; s.className='drawer-scrim';
+  s.addEventListener('click', closeMaoDrawer);
+  const d=document.createElement('div'); d.id='mao-drawer'; d.className='drawer';
+  document.body.appendChild(s); document.body.appendChild(d);
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape' && d.classList.contains('open')) closeMaoDrawer();
+  });
+}
+function maoDetail(i){
+  ensureMaoDrawer();
+  maoDetailIdx=i; maoDetailEditing=false; maoDetailConfirmDel=false;
+  renderMaoDrawer();
+  document.getElementById('mao-drawer').classList.add('open');
+  document.getElementById('mao-scrim').classList.add('open');
+}
+function closeMaoDrawer(){
+  document.getElementById('mao-drawer')?.classList.remove('open');
+  document.getElementById('mao-scrim')?.classList.remove('open');
+  maoDetailIdx=-1; maoDetailEditing=false; maoDetailConfirmDel=false;
+}
+function renderMaoDrawer(){
+  const v=MAO_VIETNAM[maoDetailIdx]; if(!v) return;
+  const d=document.getElementById('mao-drawer');
+  const n=String(maoDetailIdx+1).padStart(2,'0');
+  const isAbs=v.firmeza==='ABSOLUTO';
+  const dec=v.decision||v.titulo||'';
+  const esc=t=>(t||'').replace(/"/g,'&quot;');
+
+  const head = maoDetailEditing
+    ? `<div class="dfield"><label class="form-label">Título — la línea roja</label>
+         <input type="text" id="de-titulo" class="form-input" value="${esc(dec)}"></div>
+       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px">
+         <div><label class="form-label">Área</label><input type="text" id="de-area" class="form-input" value="${esc(v.area)}"></div>
+         <div><label class="form-label">Fecha de decisión</label><input type="text" id="de-fecha" class="form-input" value="${esc(v.fecha)}"></div>
+       </div>
+       <div style="margin-bottom:4px"><label class="form-label">Firmeza</label>
+         <div style="display:flex;gap:20px;margin-top:6px">
+           <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px"><input type="radio" name="de-firmeza" value="ABSOLUTO" ${isAbs?'checked':''}><span style="font-family:var(--f-mono);color:var(--accent)">ABSOLUTO</span></label>
+           <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px"><input type="radio" name="de-firmeza" value="CONDICIONAL" ${isAbs?'':'checked'}><span style="font-family:var(--f-mono);color:var(--ink-soft)">CONDICIONAL</span></label>
+         </div>
+       </div>`
+    : `<div style="font-size:19px;font-weight:600;color:var(--ink);line-height:1.3;margin-bottom:14px">${dec}</div>
+       <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+         <span style="font-family:var(--f-mono);font-size:8px;letter-spacing:.12em;color:${isAbs?'var(--accent)':'var(--muted-2)'}">${v.firmeza}</span>
+         <span class="chip on" style="font-size:8px;padding:2px 7px">${v.area}</span>
+         <span style="font-family:var(--f-mono);font-size:8px;color:var(--muted-2)">${v.fecha}</span>
+         <span style="font-family:var(--f-mono);font-size:9px;color:${v.veces>0?'var(--accent)':'var(--muted-2)'};margin-left:auto">${v.veces>0?`● ${v.veces} vez caído`:'○ limpio'}</span>
+       </div>`;
+
+  const body = VIETNAM_CAMPOS.map(([key,label,ph],k)=> maoDetailEditing
+    ? `<div class="dfield"><label class="form-label">${label}</label>
+         <textarea id="de-f${k}" class="form-input form-textarea" rows="3" placeholder="${ph}">${v[key]||''}</textarea></div>`
+    : `<div class="dfield">
+         <div class="dfield-label">▸ ${label}</div>
+         ${v[key] ? `<div class="dfield-text">${v[key]}</div>`
+                  : `<div class="dfield-empty">Sin registrar todavía</div>`}
+       </div>`
+  ).join('');
+
+  const foot = maoDetailEditing
+    ? `<button class="btn" onclick="maoCancelEdit()">Cancelar</button>
+       <button class="btn accent" onclick="maoSaveDetail()">Guardar cambios</button>`
+    : `<button class="btn" id="de-del" onclick="maoDeleteDetail()" style="${maoDetailConfirmDel?'color:var(--accent);border-color:var(--accent)':'margin-right:auto'}">${maoDetailConfirmDel?'¿Seguro? Eliminar':'Eliminar'}</button>
+       ${maoDetailConfirmDel?'<button class="btn" onclick="maoCancelDelete()">Cancelar</button>':''}
+       <button class="btn accent" onclick="maoEditDetail()">Editar</button>`;
+
+  d.innerHTML=`
+    <div class="drawer-head">
+      <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:16px">
+        <div class="drawer-n">${n}</div>
+        <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;padding-top:6px">${maoDetailEditing?'Editando entrada':'No te olvides de Vietnam'}</div>
+        <button onclick="closeMaoDrawer()" style="background:none;border:1px solid var(--line-2);border-radius:6px;color:var(--muted);font-size:14px;cursor:pointer;padding:5px 9px;line-height:1;margin-left:auto">✕</button>
+      </div>
+      ${head}
+    </div>
+    <div class="drawer-body">${body}</div>
+    <div class="drawer-foot">${foot}</div>`;
+}
+function maoEditDetail(){ maoDetailEditing=true; maoDetailConfirmDel=false; renderMaoDrawer(); setTimeout(()=>document.getElementById('de-titulo')?.focus(),50); }
+function maoCancelEdit(){ maoDetailEditing=false; renderMaoDrawer(); }
+function maoCancelDelete(){ maoDetailConfirmDel=false; renderMaoDrawer(); }
+async function maoSaveDetail(){
+  const v=MAO_VIETNAM[maoDetailIdx]; if(!v) return;
+  const g=id=>document.getElementById(id)?.value?.trim()||'';
+  const t=g('de-titulo');
+  if(!t){ const i=document.getElementById('de-titulo'); if(i) i.style.borderColor='var(--accent)'; return; }
+  v.decision=t; v.area=g('de-area'); v.fecha=g('de-fecha');
+  v.firmeza=document.querySelector('input[name="de-firmeza"]:checked')?.value||v.firmeza;
+  VIETNAM_CAMPOS.forEach(([key],k)=>{ v[key]=g('de-f'+k); });
+  await maoSave();
+  maoDetailEditing=false; renderMaoDrawer();
+  const keep=maoDetailIdx;
+  go('manos-obra'); setTimeout(()=>{ maoTab('vietnam'); maoDetailIdx=keep; },10);
+  showToast('Cambios guardados');
+}
+async function maoDeleteDetail(){
+  if(!maoDetailConfirmDel){ maoDetailConfirmDel=true; renderMaoDrawer(); return; }
+  const v=MAO_VIETNAM[maoDetailIdx]; if(!v) return;
+  const db=getDb();
+  try{ if(v._id && db) await db.from('vietnam').delete().eq('id',v._id); }
+  catch(e){ console.error('maoDeleteDetail:',e); showToast('No se pudo eliminar'); return; }
+  MAO_VIETNAM.splice(maoDetailIdx,1);
+  closeMaoDrawer();
+  go('manos-obra'); setTimeout(()=>maoTab('vietnam'),10);
+  showToast('Entrada eliminada');
 }
 function submitMaoEntry(){
   const tab=maoActiveTab;
@@ -575,32 +719,7 @@ const PAGES = {
     const totalVeces = vietnam.reduce((s,v)=>s+v.veces,0);
     const absolutos  = vietnam.filter(v=>v.firmeza==='ABSOLUTO').length;
 
-    const vCards = vietnam.map(v=>{
-      const isAbs = v.firmeza==='ABSOLUTO';
-      const dec = v.decision||v.titulo||'';
-      const vecesHtml = v.veces > 0
-        ? `<span style="font-family:var(--f-mono);font-size:10px;color:var(--accent)">● ${v.veces} vez caído</span>`
-        : `<span style="font-family:var(--f-mono);font-size:10px;color:var(--muted)">● limpio</span>`;
-      const bloque=(label,texto,estilo='')=> texto
-        ? `<div style="border-top:1px solid var(--line);padding-top:14px;margin-top:14px">
-             <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.16em;color:var(--accent);margin-bottom:8px;text-transform:uppercase">▸ ${label}</div>
-             <p style="font-size:12.5px;line-height:1.7;color:var(--ink-soft);font-weight:300;${estilo}">${texto}</p>
-           </div>`
-        : '';
-      return `<div class="card c-6" style="--bc:var(--accent)">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
-          <span class="chip on">${v.area}</span>
-          <span class="chip">${v.fecha}</span>
-          <span class="card-tag" style="margin-left:auto;${isAbs?'color:var(--accent);border-color:var(--accent-w)':''}">${v.firmeza}</span>
-        </div>
-        <p style="font-size:16px;font-weight:600;color:var(--ink);line-height:1.4;margin-bottom:10px;">${dec}</p>
-        <div style="display:flex;justify-content:flex-end">${vecesHtml}</div>
-        ${bloque('Qué pasó', v.que_paso)}
-        ${bloque('Por qué se termina', v.por_que_termina)}
-        ${bloque('Por qué caigo', v.por_que_caigo, 'color:var(--muted);font-style:italic')}
-        ${bloque('Qué me costó aprenderlo', v.que_costo)}
-      </div>`;
-    }).join('');
+    const vList = vietnam.map((v,i)=>vietnamRow(v,i,true)).join('');
 
     const cCards = compromisos.map(c=>`<div class="card c-4">
       ${cl(c.titulo.toUpperCase(), c.area)}
@@ -642,23 +761,7 @@ const PAGES = {
         <div class="card c-12">
           ${cl('NO TE OLVIDES DE VIETNAM', `${vietnam.length} ENTRADA${vietnam.length!==1?'S':''}`)}
           <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.1em;color:${totalVeces>0?'var(--accent)':'var(--muted-2)'};margin-bottom:2px">${absolutos} ABSOLUTO${absolutos!==1?'S':''} · ${totalVeces} VEZ${totalVeces!==1?'ES':''} CAÍDO</div>
-          ${vietnam.map((v,i)=>{
-            const isAbs=v.firmeza==='ABSOLUTO';
-            const dec=v.decision||v.titulo||'';
-            const vecesHtml=v.veces>0?`<span style="font-family:var(--f-mono);font-size:9px;color:var(--accent);margin-left:auto">● ${v.veces} caído</span>`:`<span style="font-family:var(--f-mono);font-size:9px;color:var(--muted-2);margin-left:auto">○</span>`;
-            return `<div style="display:flex;gap:18px;padding:14px 0;border-top:1px solid var(--line)">
-              <div style="font-family:var(--f-mono);font-size:26px;font-weight:700;color:var(--line-2);flex:none;width:38px;line-height:1;user-select:none">${String(i+1).padStart(2,'0')}</div>
-              <div style="flex:1">
-                <div style="font-size:15px;font-weight:600;color:var(--ink);line-height:1.35;margin-bottom:8px">${dec}</div>
-                <div style="display:flex;align-items:center;gap:10px">
-                  <span style="font-family:var(--f-mono);font-size:8px;letter-spacing:.1em;color:${isAbs?'var(--accent)':'var(--muted-2)'}">${v.firmeza}</span>
-                  <span class="chip on" style="font-size:8px;padding:2px 6px">${v.area}</span>
-                  <span style="font-family:var(--f-mono);font-size:8px;color:var(--muted-2)">${v.fecha}</span>
-                  ${vecesHtml}
-                </div>
-              </div>
-            </div>`;
-          }).join('')}
+          ${vietnam.map((v,i)=>vietnamRow(v,i,false)).join('')}
         </div>
         <div class="card c-8">
           ${cl('COMPROMISOS', `${compromisos.length} ACTIVOS`)}
@@ -696,7 +799,12 @@ const PAGES = {
             </div>
           </div>
         </div>
-        <div class="grid">${vCards}</div>
+        <div class="grid">
+          <div class="card c-12">
+            ${cl('EL REGISTRO COMPLETO','CLIC PARA ABRIR')}
+            ${vList}
+          </div>
+        </div>
       </div>
 
       <div id="mao-compromisos" class="mao-panel" style="display:none">

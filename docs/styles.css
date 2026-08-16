@@ -350,3 +350,26 @@ body{
 .form-input{ width:100%; background:var(--bg); border:1px solid var(--line-2); border-radius:var(--radius-sm); color:var(--ink); font-family:var(--f-sans); font-size:13px; padding:9px 12px; outline:none; transition:border-color .18s; }
 .form-input:focus{ border-color:var(--accent); }
 .form-textarea{ resize:vertical; min-height:72px; line-height:1.6; }
+
+/* ---------- filas clicables de Vietnam ---------- */
+.vrow{ display:flex; gap:18px; align-items:flex-start; padding:14px 12px; margin:0 -12px; border-top:1px solid var(--line); cursor:pointer; border-radius:var(--radius-sm); transition:background .16s; }
+.vrow:hover{ background:var(--surface-2); }
+.vrow-n{ font-family:var(--f-mono); font-size:26px; font-weight:700; color:var(--line-2); flex:none; width:38px; line-height:1; user-select:none; transition:color .16s; }
+.vrow:hover .vrow-n{ color:var(--accent); }
+.vrow-prev{ font-size:12px; line-height:1.6; color:var(--muted); font-weight:300; margin-top:10px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.vrow-arrow{ font-family:var(--f-mono); font-size:13px; color:var(--muted-2); flex:none; align-self:center; opacity:0; transition:opacity .16s, transform .16s; }
+.vrow:hover .vrow-arrow{ opacity:1; transform:translateX(3px); }
+
+/* ---------- drawer de detalle ---------- */
+.drawer-scrim{ position:fixed; inset:0; background:rgba(0,0,0,.55); backdrop-filter:blur(3px); z-index:249; opacity:0; pointer-events:none; transition:opacity .26s; }
+.drawer-scrim.open{ opacity:1; pointer-events:auto; }
+.drawer{ position:fixed; top:0; right:0; height:100vh; width:min(560px,94vw); background:var(--surface); border-left:1px solid var(--line-2); z-index:250; transform:translateX(101%); transition:transform .3s cubic-bezier(.32,.72,0,1); display:flex; flex-direction:column; box-shadow:var(--shadow-h); }
+.drawer.open{ transform:none; }
+.drawer-head{ flex:none; padding:24px 28px 20px; border-bottom:1px solid var(--line); }
+.drawer-n{ font-family:var(--f-mono); font-size:30px; font-weight:700; color:var(--line-2); line-height:1; user-select:none; }
+.drawer-body{ flex:1; overflow-y:auto; padding:24px 28px 8px; }
+.drawer-foot{ flex:none; padding:16px 28px; border-top:1px solid var(--line); display:flex; gap:10px; justify-content:flex-end; align-items:center; }
+.dfield{ margin-bottom:24px; }
+.dfield-label{ font-family:var(--f-mono); font-size:8px; letter-spacing:.16em; color:var(--accent); text-transform:uppercase; margin-bottom:9px; }
+.dfield-text{ font-size:13px; line-height:1.75; color:var(--ink-soft); font-weight:300; white-space:pre-wrap; }
+.dfield-empty{ font-size:12.5px; line-height:1.6; color:var(--muted-2); font-style:italic; }
