@@ -4,8 +4,9 @@
     {
       "name": "preview",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["/tmp/ryuzaki/server.py"],
-      "port": 4399
+      "runtimeArgs": ["/private/tmp/claude-501/-Users-gabrieltoledobrintrup-Documents-GitHub-Ryuzaki/e286ddfa-4eab-4e8a-8e66-51675a82dc48/scratchpad/server.py"],
+      "port": 4399,
+      "autoPort": false
     }
   ]
 }
