@@ -6,3 +6,6 @@
 
 # Local preview server logs
 *.log
+
+# Archivos personales — van a Supabase Storage, nunca al repo público
+Files/
