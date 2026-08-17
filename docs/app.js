@@ -141,6 +141,106 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 let _supa = null;
 function getDb(){ if(!_supa && window.supabase) _supa=window.supabase.createClient(SUPA_URL,SUPA_KEY); return _supa; }
 
+/* ============================================================
+   ACCESO · sesión con código al correo
+   ============================================================ */
+const RYU_MARK_SVG = `<svg class="ry-mark" viewBox="0 0 48 48" fill="none" aria-label="Ryuzaki">
+  <path class="cm" d="M7 14V7H14 M34 7H41V14 M7 34V41H14 M41 34V41H34"/>
+  <rect class="gl" x="16" y="12" width="6.2" height="22" rx="1"/>
+  <rect class="gl" x="16" y="27.8" width="15.5" height="6.2" rx="1"/>
+  <rect class="cr" x="34.5" y="26.5" width="6.2" height="7.5" rx="1"/>
+</svg>`;
+let ryuCorreoPendiente = '';
+
+function ensureAuthGate(){
+  let g=document.getElementById('ryu-gate');
+  if(!g){
+    g=document.createElement('div'); g.id='ryu-gate'; g.className='gate';
+    g.innerHTML=`<div class="gate-box">
+      <div class="gate-mark">${RYU_MARK_SVG}</div>
+      <div class="gate-word">RYUZAKI</div>
+      <div class="gate-sub"><b>強</b> · Acceso privado</div>
+      <div id="gate-step"></div>
+    </div>`;
+    document.body.appendChild(g);
+  }
+  g.classList.remove('done');
+  renderGateStep('correo');
+  return g;
+}
+function renderGateStep(paso){
+  const s=document.getElementById('gate-step'); if(!s) return;
+  if(paso==='correo'){
+    s.innerHTML=`
+      <div class="gate-hint">Identifícate para continuar</div>
+      <input type="email" id="gate-correo" class="form-input" placeholder="tu correo" autocomplete="email" value="${ryuCorreoPendiente}">
+      <button class="btn accent" id="gate-btn" onclick="authEnviarCodigo()" style="width:100%;margin-top:12px">Enviar código</button>
+      <div class="gate-err" id="gate-err"></div>`;
+    const i=document.getElementById('gate-correo');
+    i?.addEventListener('keydown',e=>{ if(e.key==='Enter') authEnviarCodigo(); });
+    setTimeout(()=>i?.focus(),60);
+  } else {
+    s.innerHTML=`
+      <div class="gate-hint">Código enviado a ${ryuCorreoPendiente}</div>
+      <input type="text" id="gate-codigo" class="form-input gate-code" placeholder="000000" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+      <button class="btn accent" id="gate-btn" onclick="authVerificar()" style="width:100%;margin-top:12px">Entrar</button>
+      <div class="gate-err" id="gate-err"></div>
+      <button class="gate-back" onclick="renderGateStep('correo')">← Usar otro correo</button>`;
+    const i=document.getElementById('gate-codigo');
+    i?.addEventListener('keydown',e=>{ if(e.key==='Enter') authVerificar(); });
+    setTimeout(()=>i?.focus(),60);
+  }
+}
+function gateError(msg){ const e=document.getElementById('gate-err'); if(e) e.textContent=msg||''; }
+function gateOcupado(txt){ const b=document.getElementById('gate-btn'); if(b){ b.disabled=!!txt; b.textContent=txt||b.textContent; } }
+
+async function authEnviarCodigo(){
+  const correo=document.getElementById('gate-correo')?.value?.trim();
+  if(!correo){ gateError('Escribe tu correo'); return; }
+  const db=getDb(); if(!db){ gateError('Sin conexión a la base'); return; }
+  gateError(''); gateOcupado('Enviando…');
+  const { error }=await db.auth.signInWithOtp({ email:correo, options:{ shouldCreateUser:false } });
+  if(error){
+    gateOcupado(''); const b=document.getElementById('gate-btn');
+    if(b){ b.disabled=false; b.textContent='Enviar código'; }
+    gateError(/not.*found|signups? not allowed|invalid/i.test(error.message)
+      ? 'Ese correo no tiene acceso' : error.message);
+    return;
+  }
+  ryuCorreoPendiente=correo;
+  renderGateStep('codigo');
+}
+async function authVerificar(){
+  const token=document.getElementById('gate-codigo')?.value?.trim();
+  if(!token){ gateError('Escribe el código'); return; }
+  const db=getDb(); if(!db) return;
+  gateError(''); gateOcupado('Verificando…');
+  const { error }=await db.auth.verifyOtp({ email:ryuCorreoPendiente, token, type:'email' });
+  if(error){
+    const b=document.getElementById('gate-btn');
+    if(b){ b.disabled=false; b.textContent='Entrar'; }
+    gateError('Código incorrecto o vencido');
+    return;
+  }
+  await entrarApp();
+}
+async function entrarApp(){
+  document.getElementById('ryu-gate')?.classList.add('done');
+  await maoLoad();
+  go(currentPage||'dashboard');
+}
+async function authSalir(){
+  try{ await getDb()?.auth.signOut(); }catch(e){}
+  location.reload();
+}
+async function arrancarSesion(){
+  const db=getDb();
+  if(!db){ console.error('supabase-js no cargó'); return; }
+  const { data }=await db.auth.getSession();
+  if(data?.session) await entrarApp();
+  else ensureAuthGate();
+}
+
 async function maoLoad(){
   const db=getDb(); if(!db) return;
   try{
@@ -842,6 +942,14 @@ const PAGES = {
         <div class="card c-4">${cl('BUILD','VERSIÓN')}<div class="metric sm">1.0</div><div class="metric-sub">Ryuzaki Intelligence System</div></div>
         <div class="card c-4">${cl('IDIOMA','LOCALE')}<div class="metric sm">ES</div><div class="metric-sub">Español · Chile</div></div>
       </div>
+      <div class="sec-title">SESIÓN</div>
+      <div class="grid">
+        <div class="card c-6">
+          ${cl('CUENTA','SESIÓN ACTIVA')}
+          <div id="cfg-correo" class="metric-sub" style="margin-bottom:16px">—</div>
+          <button class="btn" onclick="authSalir()">Cerrar sesión</button>
+        </div>
+      </div>
     `;
   },
 };
@@ -881,6 +989,12 @@ function go(id){
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.nav===id));
   $('#crumb-section').textContent = (meta?.label||id).toUpperCase();
   const view = $('#view'); view.innerHTML = page(); view.classList.remove('fade'); void view.offsetWidth; view.classList.add('fade'); view.scrollTop = 0;
+  if(id==='configuracion'){
+    getDb()?.auth.getUser().then(({data})=>{
+      const c=document.getElementById('cfg-correo');
+      if(c) c.textContent = data?.user?.email || 'sin sesión';
+    }).catch(()=>{});
+  }
 }
 
 
@@ -939,9 +1053,9 @@ function boot(){
 /* ============================================================
    INIT
    ============================================================ */
-maoLoad(); // async, carga desde Supabase en segundo plano
 buildNav();
 go('dashboard');
+arrancarSesion(); // muestra la pantalla de acceso o entra si hay sesión
 document.querySelector('.logo').addEventListener('click',()=>go('dashboard'));
 $('#settings-btn').addEventListener('click',()=>go('configuracion'));
 boot();
