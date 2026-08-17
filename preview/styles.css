@@ -388,6 +388,6 @@ body{
 .gate-back{ background:none; border:none; font-family:var(--f-mono); font-size:9px; letter-spacing:.16em; color:var(--muted-2); text-transform:uppercase; cursor:pointer; margin-top:18px; padding:4px; }
 .gate-back:hover{ color:var(--ink-soft); }
 .gate-code{ text-align:center; font-family:var(--f-mono); font-size:22px; letter-spacing:.34em; padding:12px; }
-.gate-o{ display:flex; align-items:center; gap:10px; margin:14px 0 12px; }
-.gate-o::before, .gate-o::after{ content:''; flex:1; height:1px; background:var(--line); }
-.gate-o span{ font-family:var(--f-mono); font-size:8px; letter-spacing:.16em; color:var(--muted-2); text-transform:uppercase; }
+.gate-wait{ font-size:30px; line-height:1; margin-bottom:16px; animation:gatePulse 1.6s ease-in-out infinite; }
+@keyframes gatePulse{ 0%,100%{ opacity:.28; transform:translateY(0) } 50%{ opacity:1; transform:translateY(-3px) } }
+@media (prefers-reduced-motion:reduce){ .gate-wait{ animation:none; opacity:.8 } }

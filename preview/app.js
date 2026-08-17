@@ -174,22 +174,27 @@ function ensureAuthGate(){
     document.body.appendChild(g);
   }
   g.classList.remove('done');
-  renderGateStep();
+  renderGateStep(hayPasskeys() ? 'esperando' : 'clave');
   return g;
 }
-function renderGateStep(){
+function renderGateStep(paso='clave'){
   const s=document.getElementById('gate-step'); if(!s) return;
-  const bloquePasskey = hayPasskeys()
-    ? `<button class="btn accent" id="gate-pk" onclick="authPasskey()" style="width:100%">☝ Entrar con Touch ID</button>
-       <div class="gate-o"><span>o con contraseña</span></div>`
-    : '';
+
+  if(paso==='esperando'){
+    s.innerHTML=`
+      <div class="gate-wait">☝</div>
+      <div class="gate-hint" style="margin-bottom:0">Esperando tu huella…</div>
+      <button class="gate-back" onclick="renderGateStep('clave')">Usar contraseña</button>`;
+    return;
+  }
+
   s.innerHTML=`
     <div class="gate-hint">Identifícate para continuar</div>
-    ${bloquePasskey}
     <input type="email" id="gate-correo" class="form-input" placeholder="tu correo" autocomplete="username" value="${ryuCorreoPendiente}">
     <input type="password" id="gate-clave" class="form-input" placeholder="contraseña" autocomplete="current-password" style="margin-top:9px">
-    <button class="btn" id="gate-btn" onclick="authEntrar()" style="width:100%;margin-top:12px">Entrar</button>
-    <div class="gate-err" id="gate-err"></div>`;
+    <button class="btn accent" id="gate-btn" onclick="authEntrar()" style="width:100%;margin-top:12px">Entrar</button>
+    <div class="gate-err" id="gate-err"></div>
+    ${hayPasskeys()?`<button class="gate-back" onclick="authPasskey()">☝ Reintentar con Touch ID</button>`:''}`;
   const enter=e=>{ if(e.key==='Enter') authEntrar(); };
   const c=document.getElementById('gate-correo'), p=document.getElementById('gate-clave');
   c?.addEventListener('keydown',enter); p?.addEventListener('keydown',enter);
@@ -216,17 +221,16 @@ async function authEntrar(){
 }
 async function authPasskey(){
   const db=getDb(); if(!db) return;
-  const b=document.getElementById('gate-pk');
-  gateError(''); if(b){ b.disabled=true; b.textContent='Esperando huella…'; }
+  renderGateStep('esperando');
   try{
     const { error }=await db.auth.signInWithPasskey();
     if(error) throw error;
     await entrarApp();
   }catch(e){
-    if(b){ b.disabled=false; b.textContent='☝ Entrar con Touch ID'; }
-    // Si el usuario cancela el diálogo del sistema, no es un error que valga la pena mostrar
+    // Cancelar el diálogo del sistema es una decisión, no un error: cae al formulario y ya
+    renderGateStep('clave');
     if(e?.name==='NotAllowedError' || /abort|cancel/i.test(e?.message||'')) return;
-    gateError('No se pudo con Touch ID — usa tu contraseña');
+    gateError('No se pudo con Touch ID — entra con tu contraseña');
     console.error('authPasskey:',e);
   }
 }
@@ -259,8 +263,10 @@ async function arrancarSesion(){
   const db=getDb();
   if(!db){ console.error('supabase-js no cargó'); return; }
   const { data }=await db.auth.getSession();
-  if(data?.session) await entrarApp();
-  else ensureAuthGate();
+  if(data?.session){ await entrarApp(); return; }
+  ensureAuthGate();
+  // El diálogo del sistema se pide solo, una vez que el boot terminó de animarse
+  if(hayPasskeys()) setTimeout(authPasskey, 1900);
 }
 
 async function maoLoad(){
