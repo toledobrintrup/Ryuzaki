@@ -7,6 +7,7 @@ const NAV = [
   { id:'dashboard',  label:'Dashboard',            group:'PRINCIPAL' },
   { id:'fin-pers',   label:'Finanzas Personales',   group:'PRINCIPAL' },
   { id:'manos-obra', label:'Manos a la obra',        group:'PRINCIPAL' },
+  { id:'compromisos', label:'Compromisos',            group:'PRINCIPAL' },
   { id:'futuro',     label:'Corporación Futuro',     group:'NEGOCIOS' },
   { id:'bosquemar',  label:'C.D. Bosquemar',         group:'NEGOCIOS' },
   { id:'construcc',  label:'Construcciones',         group:'NEGOCIOS' },
@@ -112,6 +113,59 @@ function instrPage(c){ return `
 
     <div class="card c-8">${cl('REPERTORIO','')}${table(['CANCIÓN','ARTISTA','ESTADO'],c.rep)}</div>
     <div class="card c-4">${cl('OBJETIVOS','')}<div class="list">${c.goals.map(g=>li('',g[0],g[1],g[2])).join('')}</div></div>
+  </div>`;
+}
+
+/* ============================================================
+   RACHAS · datos molde
+   Estructura pensada para volverse tablas en Supabase:
+     habitos(id, label, meta, activo)
+     registro_dia(habito_id, fecha, minutos)   ← de acá salen rachas y horas
+   Por ahora son constantes para fijar el diseño.
+   ============================================================ */
+const RACHAS = [
+  { label:'INGLÉS',    dias:34, record:34, hoy:true  },
+  { label:'LECTURA',   dias:21, record:47, hoy:true  },
+  { label:'GUITARRA',  dias:15, record:22, hoy:true  },
+  { label:'BAJO',      dias:12, record:19, hoy:false },
+  { label:'PIANO',     dias:9,  record:31, hoy:false },
+  { label:'CONTENIDO', dias:6,  record:18, hoy:false },
+];
+const INSTRUMENTOS = [
+  { nombre:'Guitarra', diasMes:18, horasMes:23, racha:15, horasAno:96, horasTotal:412, metaAno:150 },
+  { nombre:'Bajo',     diasMes:14, horasMes:17, racha:12, horasAno:71, horasTotal:288, metaAno:120 },
+  { nombre:'Piano',    diasMes:11, horasMes:13, racha:9,  horasAno:58, horasTotal:196, metaAno:120 },
+];
+const INGLES = [
+  { skill:'Listening', racha:34, nivel:78, minSem:210 },
+  { skill:'Reading',   racha:28, nivel:82, minSem:150 },
+  { skill:'Grammar',   racha:34, nivel:71, minSem:120 },
+  { skill:'Speaking',  racha:12, nivel:54, minSem:90  },
+  { skill:'Writing',   racha:7,  nivel:46, minSem:60  },
+];
+const CUERPO = {
+  pasosHoy:8432, pasosMeta:10000,
+  pasosSemana:[7200,9100,6400,11200,8800,5600,8432],
+  suenoH:7.2, readiness:84, hrv:62, kmSemana:31.4,
+};
+const CONTENIDO = { diasMes:11, racha:6, piezasMes:7, publicadas:4, borradores:3 };
+
+/* tarjeta de racha · el número manda, el récord susurra */
+function rachaCard(r){
+  const esRecord = r.dias>=r.record && r.dias>0;
+  const col = r.dias===0 ? 'var(--muted-2)' : (r.hoy ? 'var(--good)' : 'var(--warn)');
+  return `<div class="card c-2" style="${esRecord?'--bc:var(--accent)':''}">
+    <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.14em;color:var(--muted);margin-bottom:10px">${r.label}</div>
+    <div style="display:flex;align-items:baseline;gap:3px">
+      <span style="font-family:var(--f-mono);font-size:28px;font-weight:700;line-height:1;color:${col}">${r.dias}</span>
+      <span style="font-family:var(--f-mono);font-size:11px;color:var(--muted-2)">d</span>
+    </div>
+    <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.08em;color:${esRecord?'var(--accent)':'var(--muted-2)'};margin-top:8px">
+      ${esRecord?'◆ RÉCORD':`récord ${r.record}d`}
+    </div>
+    <div style="font-family:var(--f-mono);font-size:8px;color:${r.hoy?'var(--good)':'var(--muted-2)'};margin-top:5px">
+      ${r.hoy?'● hoy listo':'○ pendiente hoy'}
+    </div>
   </div>`;
 }
 
@@ -332,7 +386,6 @@ function ensureMaoModal(){
   document.body.appendChild(m);
 }
 function openMaoModal(){
-  if(maoActiveTab==='rachas'){ showToast('Las rachas se generan desde cada sección automáticamente'); return; }
   ensureMaoModal();
   const modal=document.getElementById('mao-modal');
   document.getElementById('mao-m-title').textContent=maoActiveTab==='vietnam'?'No te olvides de Vietnam':'Compromisos';
@@ -474,7 +527,7 @@ async function maoSaveDetail(){
   await maoSave();
   maoDetailEditing=false; renderMaoDrawer();
   const keep=maoDetailIdx;
-  go('manos-obra'); setTimeout(()=>{ maoTab('vietnam'); maoDetailIdx=keep; },10);
+  go('compromisos'); setTimeout(()=>{ maoTab('vietnam'); maoDetailIdx=keep; },10);
   showToast('Cambios guardados');
 }
 async function maoDeleteDetail(){
@@ -485,7 +538,7 @@ async function maoDeleteDetail(){
   catch(e){ console.error('maoDeleteDetail:',e); showToast('No se pudo eliminar'); return; }
   MAO_VIETNAM.splice(maoDetailIdx,1);
   closeMaoDrawer();
-  go('manos-obra'); setTimeout(()=>maoTab('vietnam'),10);
+  go('compromisos'); setTimeout(()=>maoTab('vietnam'),10);
   showToast('Entrada eliminada');
 }
 function submitMaoEntry(){
@@ -508,7 +561,7 @@ function submitMaoEntry(){
     MAO_COMPROMISOS.push({titulo,area,desc});
   }
   maoSave(); closeMaoModal();
-  go('manos-obra');
+  go('compromisos');
   setTimeout(()=>maoTab(tab),10);
 }
 
@@ -838,74 +891,165 @@ const PAGES = {
     ])}</div>
   </div>`,
 
-  /* ---------------- MANOS A LA OBRA ---------------- */
+  /* ---------------- MANOS A LA OBRA · indicadores de vida ---------------- */
   'manos-obra':()=>{
+    const c = CUERPO;
+    const pasosPct = Math.min(100, Math.round(c.pasosHoy/c.pasosMeta*100));
+    const horasMusicaAno = INSTRUMENTOS.reduce((s,i)=>s+i.horasAno,0);
+    const enRacha = RACHAS.filter(r=>r.dias>0).length;
+    const hechoHoy = RACHAS.filter(r=>r.hoy).length;
+
+    return `
+      ${head('PRINCIPAL · CONSTANCIA','Manos a la obra','Lo que haces, no lo que dices que vas a hacer. Los números que no admiten discusión.',[])}
+
+      <div class="sec-title">RACHAS ACTIVAS</div>
+      <div class="grid" style="margin-bottom:var(--gap)">
+        ${RACHAS.map(rachaCard).join('')}
+      </div>
+
+      <div class="grid" style="margin-bottom:var(--gap)">
+        <div class="card c-4">
+          ${cl('HOY','PROGRESO DEL DÍA')}
+          <div class="metric sm">${hechoHoy}<span style="font-size:18px;color:var(--muted-2)">/${RACHAS.length}</span></div>
+          <div class="metric-sub">hábitos cumplidos · ${enRacha} rachas vivas</div>
+          <div style="margin-top:16px">
+            ${RACHAS.map(r=>chk(r.label.charAt(0)+r.label.slice(1).toLowerCase(), r.hoy, r.hoy?'✓':'—')).join('')}
+          </div>
+        </div>
+        <div class="card c-8">
+          ${cl('MAPA DE CONSTANCIA','ÚLTIMOS 120 DÍAS')}
+          <div style="margin:8px 0 18px">${heat(120)}</div>
+          <div class="kpi-row">
+            ${RACHAS.map(r=>`<div class="kpi"><div class="k-val" style="font-size:20px">${r.dias}</div><div class="k-lab">${r.label}</div></div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-title">CUERPO · MOVIMIENTO</div>
+      <div class="grid" style="margin-bottom:var(--gap)">
+        <div class="card c-4">
+          ${cl('PASOS HOY', `META ${c.pasosMeta.toLocaleString('es-CL')}`)}
+          <div class="metric sm" style="color:${pasosPct>=100?'var(--good)':'var(--ink)'}">${c.pasosHoy.toLocaleString('es-CL')}</div>
+          <div class="metric-sub">${pasosPct}% de la meta diaria</div>
+          ${spark(c.pasosSemana.map(p=>Math.round(p/140)), 6)}
+        </div>
+        <div class="card c-4">
+          ${cl('SEMANA','PROMEDIO')}
+          <div class="kpi-row" style="margin-top:6px">
+            <div class="kpi"><div class="k-val">${Math.round(c.pasosSemana.reduce((a,b)=>a+b,0)/7/100)/10}k</div><div class="k-lab">PASOS/DÍA</div></div>
+            <div class="kpi"><div class="k-val">${c.kmSemana}</div><div class="k-lab">KM</div></div>
+          </div>
+          ${prog('Días sobre la meta', Math.round(c.pasosSemana.filter(p=>p>=c.pasosMeta).length/7*100))}
+        </div>
+        <div class="card c-4">
+          ${cl('RECUPERACIÓN','OURA')}
+          <div class="kpi-row" style="margin-top:6px">
+            <div class="kpi"><div class="k-val" style="color:var(--good)">${c.readiness}</div><div class="k-lab">READINESS</div></div>
+            <div class="kpi"><div class="k-val">${c.suenoH}h</div><div class="k-lab">SUEÑO</div></div>
+            <div class="kpi"><div class="k-val">${c.hrv}</div><div class="k-lab">HRV</div></div>
+          </div>
+          <div class="metric-sub" style="margin-top:14px;font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;color:var(--muted-2)">○ SIN CONECTAR · APPLE HEALTH + OURA</div>
+        </div>
+      </div>
+
+      <div class="sec-title">MÚSICA · HORAS AL INSTRUMENTO</div>
+      <div class="grid" style="margin-bottom:var(--gap)">
+        ${INSTRUMENTOS.map(i=>`
+          <div class="card c-4">
+            ${cl(i.nombre.toUpperCase(), `RACHA ${i.racha}D`)}
+            <div style="display:flex;align-items:baseline;gap:6px;margin:6px 0 2px">
+              <span class="metric sm" style="margin:0">${i.horasAno}</span>
+              <span style="font-family:var(--f-mono);font-size:12px;color:var(--muted-2)">h en 2026</span>
+            </div>
+            <div class="metric-sub">${i.horasTotal} h acumuladas históricas</div>
+            <div style="margin-top:16px">${prog(`Meta ${i.metaAno}h del año`, Math.round(i.horasAno/i.metaAno*100))}</div>
+            <div class="kpi-row" style="margin-top:6px">
+              <div class="kpi"><div class="k-val">${i.diasMes}</div><div class="k-lab">DÍAS/MES</div></div>
+              <div class="kpi"><div class="k-val">${Math.round(i.horasMes/i.diasMes*10)/10}</div><div class="k-lab">H POR SESIÓN</div></div>
+            </div>
+          </div>`).join('')}
+        <div class="card c-4">
+          ${cl('REPARTO','HORAS 2026')}
+          <div class="donut" style="position:relative">${donut(Math.round(INSTRUMENTOS[0].horasAno/horasMusicaAno*100),'GUITARRA')}</div>
+          <div class="chips" style="margin-top:16px">
+            ${INSTRUMENTOS.map(i=>`<span class="chip on">${i.nombre} ${i.horasAno}h</span>`).join('')}
+          </div>
+        </div>
+        <div class="card c-8">
+          ${cl('TOTAL MÚSICA','ACUMULADO')}
+          <div class="kpi-row">
+            <div class="kpi"><div class="k-val">${horasMusicaAno}</div><div class="k-lab">HORAS 2026</div></div>
+            <div class="kpi"><div class="k-val">${INSTRUMENTOS.reduce((s,i)=>s+i.horasTotal,0)}</div><div class="k-lab">HORAS TOTALES</div></div>
+            <div class="kpi"><div class="k-val">${INSTRUMENTOS.reduce((s,i)=>s+i.diasMes,0)}</div><div class="k-lab">SESIONES/MES</div></div>
+            <div class="kpi"><div class="k-val">${Math.round(horasMusicaAno/33*10)/10}</div><div class="k-lab">H/SEMANA</div></div>
+          </div>
+          <div style="margin:18px 0 0">${heat(90)}</div>
+        </div>
+      </div>
+
+      <div class="sec-title">INGLÉS · POR HABILIDAD</div>
+      <div class="grid" style="margin-bottom:var(--gap)">
+        <div class="card c-8">
+          ${cl('DESGLOSE','LAS CINCO')}
+          ${INGLES.map(e=>`
+            <div style="display:flex;align-items:center;gap:14px;padding:11px 0;border-top:1px solid var(--line)">
+              <span style="font-size:13px;color:var(--ink);width:88px;flex:none">${e.skill}</span>
+              <span style="font-family:var(--f-mono);font-size:9px;color:${e.racha>=21?'var(--good)':e.racha>=7?'var(--warn)':'var(--muted-2)'};width:44px;flex:none">${e.racha}d</span>
+              <div style="flex:1">${prog('', e.nivel)}</div>
+              <span style="font-family:var(--f-mono);font-size:9px;color:var(--muted-2);width:66px;text-align:right;flex:none">${e.minSem} min/sem</span>
+            </div>`).join('')}
+        </div>
+        <div class="card c-4">
+          ${cl('LA MÁS FLOJA','ATENCIÓN')}
+          <div class="metric sm" style="color:var(--accent)">${INGLES.slice().sort((a,b)=>a.nivel-b.nivel)[0].skill}</div>
+          <div class="metric-sub">${INGLES.slice().sort((a,b)=>a.nivel-b.nivel)[0].nivel}% · la que arrastra el promedio</div>
+          <div class="kpi-row" style="margin-top:20px">
+            <div class="kpi"><div class="k-val">${Math.round(INGLES.reduce((s,e)=>s+e.nivel,0)/INGLES.length)}%</div><div class="k-lab">PROMEDIO</div></div>
+            <div class="kpi"><div class="k-val">${Math.round(INGLES.reduce((s,e)=>s+e.minSem,0)/60*10)/10}h</div><div class="k-lab">POR SEMANA</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-title">CONTENIDO</div>
+      <div class="grid">
+        ${kpi('RACHA CREACIÓN',`${CONTENIDO.racha}d`,'días seguidos creando','up','c-3')}
+        ${kpi('DÍAS ESTE MES',`${CONTENIDO.diasMes}`,'con algo producido','up','c-3')}
+        ${kpi('PIEZAS DEL MES',`${CONTENIDO.piezasMes}`,`${CONTENIDO.publicadas} publicadas`,'up','c-3')}
+        ${kpi('EN BORRADOR',`${CONTENIDO.borradores}`,'esperando terminar','down','c-3')}
+      </div>
+    `;
+  },
+
+  /* ---------------- COMPROMISOS · Vietnam + compromisos ---------------- */
+  compromisos:()=>{
     maoActiveTab = 'vietnam';
-    const vietnam    = MAO_VIETNAM;
+    const vietnam     = MAO_VIETNAM;
     const compromisos = MAO_COMPROMISOS;
 
     const totalVeces = vietnam.reduce((s,v)=>s+v.veces,0);
     const absolutos  = vietnam.filter(v=>v.firmeza==='ABSOLUTO').length;
-
     const vList = vietnam.map((v,i)=>vietnamRow(v,i,true)).join('');
-
     const cCards = compromisos.map(c=>`<div class="card c-4">
       ${cl(c.titulo.toUpperCase(), c.area)}
       <p style="font-size:13px;line-height:1.65;color:var(--muted);font-weight:300;margin-top:6px;">${c.desc}</p>
     </div>`).join('');
 
-    const rachasHtml = `
-      <div class="grid">
-        ${kpi('RACHA INGLÉS','34d','récord personal','up','c-3')}
-        ${kpi('RACHA GUITARRA','15d','récord 22d','up','c-3')}
-        ${kpi('RACHA LECTURA','21d','récord personal','up','c-3')}
-        ${kpi('HÁBITOS ACTIVOS','5/5','todos en racha','up','c-3')}
-      </div>
-      <div class="sec-title">MAPA DE CONSTANCIA · 60 DÍAS</div>
-      <div class="grid">
-        <div class="card c-12">${cl('TODOS LOS DOMINIOS','CALOR DE ACTIVIDAD')}
-          <div style="margin:6px 0 18px">${heat(120)}</div>
-          <div class="kpi-row">
-            <div class="kpi"><div class="k-val">34</div><div class="k-lab">INGLÉS</div></div>
-            <div class="kpi"><div class="k-val">21</div><div class="k-lab">LECTURA</div></div>
-            <div class="kpi"><div class="k-val">15</div><div class="k-lab">GUITARRA</div></div>
-            <div class="kpi"><div class="k-val">12</div><div class="k-lab">BAJO</div></div>
-            <div class="kpi"><div class="k-val">9</div><div class="k-lab">PIANO</div></div>
-            <div class="kpi"><div class="k-val">21</div><div class="k-lab">HÁBITOS</div></div>
-          </div>
-        </div>
-      </div>
-      <div class="sec-title">DETALLE POR ÁREA</div>
-      <div class="grid">
-        <div class="card c-4">${cl('IDIOMA','INGLÉS')}${prog('Constancia',96)}${prog('Meta semanal',88)}<div class="metric-sub" style="margin-top:12px">Racha actual: <b style="color:var(--ink)">34 días</b></div></div>
-        <div class="card c-4">${cl('MÚSICA','INSTRUMENTOS')}${prog('Guitarra · 15d',68)}${prog('Bajo · 12d',55)}${prog('Piano · 9d',41)}</div>
-        <div class="card c-4">${cl('MENTE','LECTURA')}${prog('Constancia',94)}${prog('Comprensión activa',75)}<div class="metric-sub" style="margin-top:12px">Racha actual: <b style="color:var(--ink)">21 días</b></div></div>
-      </div>`;
-
     return `
-      ${head('PRINCIPAL · ACCIÓN','Manos a la obra','Donde la inteligencia se convierte en movimiento. Lo que aprendiste. Lo que te comprometes. Lo que no debes olvidar.',['<button class="btn accent" onclick="openMaoModal()">+ Agregar</button>'])}
+      ${head('PRINCIPAL · LÍMITES','Compromisos','Las líneas rojas que ya cruzaste una vez, y lo que decidiste sostener. Para no volver a discutirlo contigo mismo.',['<button class="btn accent" onclick="openMaoModal()">+ Agregar</button>'])}
 
       <div class="grid" style="margin-bottom:var(--gap)">
-        <div class="card c-12">
+        <div class="card c-8">
           ${cl('NO TE OLVIDES DE VIETNAM', `${vietnam.length} ENTRADA${vietnam.length!==1?'S':''}`)}
           <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.1em;color:${totalVeces>0?'var(--accent)':'var(--muted-2)'};margin-bottom:2px">${absolutos} ABSOLUTO${absolutos!==1?'S':''} · ${totalVeces} VEZ${totalVeces!==1?'ES':''} CAÍDO</div>
           ${vietnam.map((v,i)=>vietnamRow(v,i,false)).join('')}
         </div>
-        <div class="card c-8">
-          ${cl('COMPROMISOS', `${compromisos.length} ACTIVOS`)}
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-2);border-radius:8px;overflow:hidden;margin-top:12px">
-            ${compromisos.map(c=>`<div style="padding:12px 14px;background:var(--bg)">
-              <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.12em;color:var(--muted-2);margin-bottom:5px">${c.area.toUpperCase()}</div>
-              <div style="font-size:13px;color:var(--ink-soft);line-height:1.35">${c.titulo}</div>
-            </div>`).join('')}
-          </div>
-        </div>
         <div class="card c-4">
-          ${cl('RACHAS', 'TOP 3 ACTIVAS')}
-          <div class="kpi-row" style="margin-top:12px">
-            <div class="kpi"><div class="k-val" style="font-size:20px;color:var(--good)">34d</div><div class="k-lab">INGLÉS</div></div>
-            <div class="kpi"><div class="k-val" style="font-size:20px;color:var(--good)">21d</div><div class="k-lab">LECTURA</div></div>
-            <div class="kpi"><div class="k-val" style="font-size:20px;color:var(--good)">15d</div><div class="k-lab">GUITARRA</div></div>
+          ${cl('COMPROMISOS', `${compromisos.length} ACTIVOS`)}
+          <div style="display:grid;grid-template-columns:1fr;gap:1px;background:var(--line-2);border-radius:8px;overflow:hidden;margin-top:12px">
+            ${compromisos.map(c=>`<div style="padding:11px 13px;background:var(--bg)">
+              <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.12em;color:var(--muted-2);margin-bottom:4px">${c.area.toUpperCase()}</div>
+              <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.35">${c.titulo}</div>
+            </div>`).join('')}
           </div>
         </div>
       </div>
@@ -913,7 +1057,6 @@ const PAGES = {
       <div class="ptabs">
         <div class="ptab active" data-tab="vietnam" onclick="maoTab('vietnam')">No te olvides de Vietnam</div>
         <div class="ptab" data-tab="compromisos" onclick="maoTab('compromisos')">Compromisos</div>
-        <div class="ptab" data-tab="rachas" onclick="maoTab('rachas')">Rachas</div>
       </div>
 
       <div id="mao-vietnam" class="mao-panel">
@@ -937,10 +1080,6 @@ const PAGES = {
 
       <div id="mao-compromisos" class="mao-panel" style="display:none">
         <div class="grid">${cCards}</div>
-      </div>
-
-      <div id="mao-rachas" class="mao-panel" style="display:none">
-        ${rachasHtml}
       </div>
     `;
   },
