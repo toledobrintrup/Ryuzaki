@@ -139,7 +139,16 @@ let MAO_COMPROMISOS = [
 const SUPA_URL = 'https://lddonylokjrfnbzrbpts.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkZG9ueWxva2pyZm5ienJicHRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1MzgzNTEsImV4cCI6MjEwMjExNDM1MX0.4zGW9NlglbBecdwzHPiHcnwiR2pz1cTLGMxd_JEUKqs';
 let _supa = null;
-function getDb(){ if(!_supa && window.supabase) _supa=window.supabase.createClient(SUPA_URL,SUPA_KEY); return _supa; }
+function getDb(){
+  if(!_supa && window.supabase){
+    _supa=window.supabase.createClient(SUPA_URL,SUPA_KEY,{ auth:{ experimental:{ passkey:true } } });
+  }
+  return _supa;
+}
+/* ¿este navegador sabe de huellas/Face ID? */
+function hayPasskeys(){
+  return typeof window.PublicKeyCredential!=='undefined' && window.isSecureContext;
+}
 
 /* ============================================================
    ACCESO · sesión con código al correo
@@ -170,11 +179,16 @@ function ensureAuthGate(){
 }
 function renderGateStep(){
   const s=document.getElementById('gate-step'); if(!s) return;
+  const bloquePasskey = hayPasskeys()
+    ? `<button class="btn accent" id="gate-pk" onclick="authPasskey()" style="width:100%">☝ Entrar con Touch ID</button>
+       <div class="gate-o"><span>o con contraseña</span></div>`
+    : '';
   s.innerHTML=`
     <div class="gate-hint">Identifícate para continuar</div>
+    ${bloquePasskey}
     <input type="email" id="gate-correo" class="form-input" placeholder="tu correo" autocomplete="username" value="${ryuCorreoPendiente}">
     <input type="password" id="gate-clave" class="form-input" placeholder="contraseña" autocomplete="current-password" style="margin-top:9px">
-    <button class="btn accent" id="gate-btn" onclick="authEntrar()" style="width:100%;margin-top:12px">Entrar</button>
+    <button class="btn" id="gate-btn" onclick="authEntrar()" style="width:100%;margin-top:12px">Entrar</button>
     <div class="gate-err" id="gate-err"></div>`;
   const enter=e=>{ if(e.key==='Enter') authEntrar(); };
   const c=document.getElementById('gate-correo'), p=document.getElementById('gate-clave');
@@ -199,6 +213,38 @@ async function authEntrar(){
     return;
   }
   await entrarApp();
+}
+async function authPasskey(){
+  const db=getDb(); if(!db) return;
+  const b=document.getElementById('gate-pk');
+  gateError(''); if(b){ b.disabled=true; b.textContent='Esperando huella…'; }
+  try{
+    const { error }=await db.auth.signInWithPasskey();
+    if(error) throw error;
+    await entrarApp();
+  }catch(e){
+    if(b){ b.disabled=false; b.textContent='☝ Entrar con Touch ID'; }
+    // Si el usuario cancela el diálogo del sistema, no es un error que valga la pena mostrar
+    if(e?.name==='NotAllowedError' || /abort|cancel/i.test(e?.message||'')) return;
+    gateError('No se pudo con Touch ID — usa tu contraseña');
+    console.error('authPasskey:',e);
+  }
+}
+async function registrarPasskey(){
+  const db=getDb(); if(!db) return;
+  const b=document.getElementById('cfg-pk-btn');
+  if(b){ b.disabled=true; b.textContent='Esperando huella…'; }
+  try{
+    const { error }=await db.auth.registerPasskey();
+    if(error) throw error;
+    showToast('Este dispositivo quedó registrado');
+    go('configuracion');
+  }catch(e){
+    if(b){ b.disabled=false; b.textContent='Registrar este dispositivo'; }
+    if(e?.name==='NotAllowedError' || /abort|cancel/i.test(e?.message||'')) return;
+    showToast('No se pudo registrar');
+    console.error('registrarPasskey:',e);
+  }
 }
 async function entrarApp(){
   document.getElementById('ryu-gate')?.classList.add('done');
@@ -924,6 +970,15 @@ const PAGES = {
           ${cl('CUENTA','SESIÓN ACTIVA')}
           <div id="cfg-correo" class="metric-sub" style="margin-bottom:16px">—</div>
           <button class="btn" onclick="authSalir()">Cerrar sesión</button>
+        </div>
+        <div class="card c-6">
+          ${cl('TOUCH ID','ESTE DISPOSITIVO')}
+          <p style="font-size:12.5px;line-height:1.65;color:var(--muted);font-weight:300;margin:6px 0 16px">
+            ${hayPasskeys()
+              ? 'Registra tu huella para entrar sin escribir la contraseña. Queda guardada en este equipo y nunca sale de él.'
+              : 'Este navegador no soporta Touch ID. Prueba en Safari o Chrome sobre https.'}
+          </p>
+          <button class="btn accent" id="cfg-pk-btn" onclick="registrarPasskey()" ${hayPasskeys()?'':'disabled'}>Registrar este dispositivo</button>
         </div>
       </div>
     `;

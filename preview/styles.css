@@ -388,3 +388,6 @@ body{
 .gate-back{ background:none; border:none; font-family:var(--f-mono); font-size:9px; letter-spacing:.16em; color:var(--muted-2); text-transform:uppercase; cursor:pointer; margin-top:18px; padding:4px; }
 .gate-back:hover{ color:var(--ink-soft); }
 .gate-code{ text-align:center; font-family:var(--f-mono); font-size:22px; letter-spacing:.34em; padding:12px; }
+.gate-o{ display:flex; align-items:center; gap:10px; margin:14px 0 12px; }
+.gate-o::before, .gate-o::after{ content:''; flex:1; height:1px; background:var(--line); }
+.gate-o span{ font-family:var(--f-mono); font-size:8px; letter-spacing:.16em; color:var(--muted-2); text-transform:uppercase; }
