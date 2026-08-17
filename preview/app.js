@@ -25,6 +25,9 @@ const NAV = [
   { id:'configuracion', label:'Configuración',          group:'SISTEMA' },
 ];
 
+/* Marcador de versión · lo sube solo el hook de pre-commit (scripts/bump-version.sh) */
+const RYU_VERSION = 'V1.23';
+
 /* ---------- paletas ---------- */
 const PALETTES = [
   {id:'default', name:'Actual',   sub:'referencia',     bg:'#0d0f12', sf:'#15181c'},
@@ -1037,23 +1040,6 @@ const PAGES = {
     return `
       ${head('PRINCIPAL · LÍMITES','Compromisos','Las líneas rojas que ya cruzaste una vez, y lo que decidiste sostener. Para no volver a discutirlo contigo mismo.',['<button class="btn accent" onclick="openMaoModal()">+ Agregar</button>'])}
 
-      <div class="grid" style="margin-bottom:var(--gap)">
-        <div class="card c-8">
-          ${cl('NO TE OLVIDES DE VIETNAM', `${vietnam.length} ENTRADA${vietnam.length!==1?'S':''}`)}
-          <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.1em;color:${totalVeces>0?'var(--accent)':'var(--muted-2)'};margin-bottom:2px">${absolutos} ABSOLUTO${absolutos!==1?'S':''} · ${totalVeces} VEZ${totalVeces!==1?'ES':''} CAÍDO</div>
-          ${vietnam.map((v,i)=>vietnamRow(v,i,false)).join('')}
-        </div>
-        <div class="card c-4">
-          ${cl('COMPROMISOS', `${compromisos.length} ACTIVOS`)}
-          <div style="display:grid;grid-template-columns:1fr;gap:1px;background:var(--line-2);border-radius:8px;overflow:hidden;margin-top:12px">
-            ${compromisos.map(c=>`<div style="padding:11px 13px;background:var(--bg)">
-              <div style="font-family:var(--f-mono);font-size:8px;letter-spacing:.12em;color:var(--muted-2);margin-bottom:4px">${c.area.toUpperCase()}</div>
-              <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.35">${c.titulo}</div>
-            </div>`).join('')}
-          </div>
-        </div>
-      </div>
-
       <div class="ptabs">
         <div class="ptab active" data-tab="vietnam" onclick="maoTab('vietnam')">No te olvides de Vietnam</div>
         <div class="ptab" data-tab="compromisos" onclick="maoTab('compromisos')">Compromisos</div>
@@ -1079,6 +1065,12 @@ const PAGES = {
       </div>
 
       <div id="mao-compromisos" class="mao-panel" style="display:none">
+        <div class="grid" style="margin-bottom:var(--gap)">
+          <div class="card c-12">
+            ${cl('LO QUE SOSTENGO', `${compromisos.length} ACTIVOS`)}
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${areaSummaryChips(compromisos)}</div>
+          </div>
+        </div>
         <div class="grid">${cCards}</div>
       </div>
     `;
@@ -1229,6 +1221,7 @@ function boot(){
 /* ============================================================
    INIT
    ============================================================ */
+$('#ryu-ver').textContent = RYU_VERSION;
 buildNav();
 go('dashboard');
 arrancarSesion(); // muestra la pantalla de acceso o entra si hay sesión

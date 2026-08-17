@@ -391,3 +391,12 @@ body{
 .gate-wait{ font-size:30px; line-height:1; margin-bottom:16px; animation:gatePulse 1.6s ease-in-out infinite; }
 @keyframes gatePulse{ 0%,100%{ opacity:.28; transform:translateY(0) } 50%{ opacity:1; transform:translateY(-3px) } }
 @media (prefers-reduced-motion:reduce){ .gate-wait{ animation:none; opacity:.8 } }
+
+/* marcador de versión · vive en la franja del ticker, abajo a la derecha */
+.ryu-ver{
+  position:fixed; right:0; bottom:0; height:38px; z-index:50;
+  display:flex; align-items:center; padding:0 16px 0 26px;
+  background:linear-gradient(90deg, transparent 0, var(--bg-2) 24px);
+  font-family:var(--f-mono); font-size:9px; letter-spacing:.2em; color:var(--muted-2);
+  pointer-events:none; user-select:none;
+}
