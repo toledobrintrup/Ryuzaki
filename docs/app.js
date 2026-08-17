@@ -165,61 +165,37 @@ function ensureAuthGate(){
     document.body.appendChild(g);
   }
   g.classList.remove('done');
-  renderGateStep('correo');
+  renderGateStep();
   return g;
 }
-function renderGateStep(paso){
+function renderGateStep(){
   const s=document.getElementById('gate-step'); if(!s) return;
-  if(paso==='correo'){
-    s.innerHTML=`
-      <div class="gate-hint">Identifícate para continuar</div>
-      <input type="email" id="gate-correo" class="form-input" placeholder="tu correo" autocomplete="email" value="${ryuCorreoPendiente}">
-      <button class="btn accent" id="gate-btn" onclick="authEnviarCodigo()" style="width:100%;margin-top:12px">Enviar código</button>
-      <div class="gate-err" id="gate-err"></div>`;
-    const i=document.getElementById('gate-correo');
-    i?.addEventListener('keydown',e=>{ if(e.key==='Enter') authEnviarCodigo(); });
-    setTimeout(()=>i?.focus(),60);
-  } else {
-    s.innerHTML=`
-      <div class="gate-hint">Código enviado a ${ryuCorreoPendiente}</div>
-      <input type="text" id="gate-codigo" class="form-input gate-code" placeholder="000000" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
-      <button class="btn accent" id="gate-btn" onclick="authVerificar()" style="width:100%;margin-top:12px">Entrar</button>
-      <div class="gate-err" id="gate-err"></div>
-      <button class="gate-back" onclick="renderGateStep('correo')">← Usar otro correo</button>`;
-    const i=document.getElementById('gate-codigo');
-    i?.addEventListener('keydown',e=>{ if(e.key==='Enter') authVerificar(); });
-    setTimeout(()=>i?.focus(),60);
-  }
+  s.innerHTML=`
+    <div class="gate-hint">Identifícate para continuar</div>
+    <input type="email" id="gate-correo" class="form-input" placeholder="tu correo" autocomplete="username" value="${ryuCorreoPendiente}">
+    <input type="password" id="gate-clave" class="form-input" placeholder="contraseña" autocomplete="current-password" style="margin-top:9px">
+    <button class="btn accent" id="gate-btn" onclick="authEntrar()" style="width:100%;margin-top:12px">Entrar</button>
+    <div class="gate-err" id="gate-err"></div>`;
+  const enter=e=>{ if(e.key==='Enter') authEntrar(); };
+  const c=document.getElementById('gate-correo'), p=document.getElementById('gate-clave');
+  c?.addEventListener('keydown',enter); p?.addEventListener('keydown',enter);
+  setTimeout(()=>(ryuCorreoPendiente?p:c)?.focus(),60);
 }
 function gateError(msg){ const e=document.getElementById('gate-err'); if(e) e.textContent=msg||''; }
 function gateOcupado(txt){ const b=document.getElementById('gate-btn'); if(b){ b.disabled=!!txt; b.textContent=txt||b.textContent; } }
 
-async function authEnviarCodigo(){
+async function authEntrar(){
   const correo=document.getElementById('gate-correo')?.value?.trim();
-  if(!correo){ gateError('Escribe tu correo'); return; }
+  const clave =document.getElementById('gate-clave')?.value||'';
+  if(!correo || !clave){ gateError('Faltan datos'); return; }
   const db=getDb(); if(!db){ gateError('Sin conexión a la base'); return; }
-  gateError(''); gateOcupado('Enviando…');
-  const { error }=await db.auth.signInWithOtp({ email:correo, options:{ shouldCreateUser:false } });
-  if(error){
-    gateOcupado(''); const b=document.getElementById('gate-btn');
-    if(b){ b.disabled=false; b.textContent='Enviar código'; }
-    gateError(/not.*found|signups? not allowed|invalid/i.test(error.message)
-      ? 'Ese correo no tiene acceso' : error.message);
-    return;
-  }
-  ryuCorreoPendiente=correo;
-  renderGateStep('codigo');
-}
-async function authVerificar(){
-  const token=document.getElementById('gate-codigo')?.value?.trim();
-  if(!token){ gateError('Escribe el código'); return; }
-  const db=getDb(); if(!db) return;
   gateError(''); gateOcupado('Verificando…');
-  const { error }=await db.auth.verifyOtp({ email:ryuCorreoPendiente, token, type:'email' });
+  const { error }=await db.auth.signInWithPassword({ email:correo, password:clave });
   if(error){
     const b=document.getElementById('gate-btn');
     if(b){ b.disabled=false; b.textContent='Entrar'; }
-    gateError('Código incorrecto o vencido');
+    ryuCorreoPendiente=correo;
+    gateError(/invalid login/i.test(error.message) ? 'Correo o contraseña incorrectos' : error.message);
     return;
   }
   await entrarApp();
