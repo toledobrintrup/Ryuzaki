@@ -1089,6 +1089,7 @@ go('dashboard');
 arrancarSesion(); // muestra la pantalla de acceso o entra si hay sesión
 document.querySelector('.logo').addEventListener('click',()=>go('dashboard'));
 $('#settings-btn').addEventListener('click',()=>go('configuracion'));
+$('#logout-btn').addEventListener('click',authSalir);
 boot();
 clock(); setInterval(clock,1000);
 uptime(); setInterval(uptime,1000);
