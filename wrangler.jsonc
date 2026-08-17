@@ -1,0 +1,11 @@
+{
+  // Despliegue en Cloudflare Workers · sitio estático, sin build
+  "name": "ryuzaki",
+  "compatibility_date": "2026-08-17",
+  "assets": {
+    // Lo que se publica. `preview/` es el espejo local para desarrollo.
+    "directory": "./docs",
+    // La app enruta en memoria: cualquier ruta debe devolver index.html
+    "not_found_handling": "single-page-application"
+  }
+}
