@@ -26,7 +26,7 @@ const NAV = [
 ];
 
 /* Marcador de versión · lo sube solo el hook de pre-commit (scripts/bump-version.sh) */
-const RYU_VERSION = 'V1.23';
+const RYU_VERSION = 'V24';
 
 /* ---------- paletas ---------- */
 const PALETTES = [

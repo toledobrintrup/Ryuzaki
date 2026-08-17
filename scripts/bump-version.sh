@@ -8,7 +8,7 @@ set -e
 
 ROOT=$(git rev-parse --show-toplevel)
 NUM=$(( $(git rev-list --count HEAD 2>/dev/null || echo 0) + 1 ))
-VER="V1.$NUM"
+VER="V$NUM"
 
 for f in "$ROOT/preview/app.js" "$ROOT/docs/app.js"; do
   [ -f "$f" ] || continue
